@@ -1,0 +1,16 @@
+version: "3.8"
+
+volumes:
+  gradle_home:
+
+services:
+
+  peer1:
+    build: .
+    volumes:
+      - gradle_home:/gradle_home
+
+  peer2:
+    build: .
+    volumes:
+      - gradle_home:/gradle_home
