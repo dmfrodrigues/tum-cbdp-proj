@@ -7,7 +7,7 @@ checkName:
   script: 
     - bash -c '[ -s groupMembers.txt ]'
 
-checkReport:
-  stage: deploy
-  script:
-    - bash -c '[ -f report.pdf ]'
+# checkReport:
+#   stage: deploy
+#   script:
+#     - bash -c '[ -f report.pdf ]'

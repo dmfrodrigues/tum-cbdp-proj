@@ -1,16 +1,20 @@
 version: "3.8"
 
-volumes:
-  gradle_home:
-
 services:
 
-  peer1:
+  leader:
+    container_name: leader
     build: .
-    volumes:
-      - gradle_home:/gradle_home
+    healthcheck:
+      test: "[ -f /tmp/registered ]"
+      start_period: 10s
+      interval: 1s
+      timeout: 1s
+      retries: 50
 
-  peer2:
+  peer:
     build: .
-    volumes:
-      - gradle_home:/gradle_home
+    depends_on:
+      leader:
+        condition: service_healthy
+    command: ["./run.join.sh", "leader"]

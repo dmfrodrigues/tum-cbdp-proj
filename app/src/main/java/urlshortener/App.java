@@ -1,7 +1,8 @@
 package urlshortener;
 
+import java.io.File;
+import java.io.IOException;
 import java.rmi.AlreadyBoundException;
-import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -10,18 +11,23 @@ public class App extends Node {
     public static void main(String args[]) {
         try {
             register();
-            if(args[0] == "-j"){
+
+            if(args.length >= 2 && args[0].equals("-j")){
                 String peerHost = args[1];
+                System.out.println("Joining " + peerHost);
                 Registry registry = LocateRegistry.getRegistry(peerHost);
                 Stub stub = (Stub)registry.lookup("node");
                 stub.join();
             }
         } catch (Exception e) {
             e.printStackTrace();
+            return;
         }
+
+        System.err.println("Server ready");
     }
 
-    private static void register() throws RemoteException, AlreadyBoundException {
+    private static void register() throws AlreadyBoundException, IOException {
         // Instantiating the implementation class
         Node obj = new Node();
 
@@ -33,6 +39,8 @@ public class App extends Node {
         Registry registry = LocateRegistry.getRegistry();
 
         registry.bind("node", stub);
-        System.err.println("Server ready");
+
+        File file = new File("/tmp/registered");
+        file.createNewFile();
     }
 }
