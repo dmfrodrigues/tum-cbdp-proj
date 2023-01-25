@@ -20,3 +20,12 @@ services:
       leader:
         condition: service_healthy
     command: ["./run.join.sh", "leader"]
+
+  db_admin:
+    build: ./db_admin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mail.com
+      PGADMIN_DEFAULT_PASSWORD: 123
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+    ports:
+      - "4321:80"
