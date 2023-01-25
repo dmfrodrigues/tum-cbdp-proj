@@ -1,4 +1,4 @@
-package urlshortener;
+package urlshortener.raft;
 
 public abstract class LogEntry {
     public int term;

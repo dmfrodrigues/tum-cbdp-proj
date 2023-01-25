@@ -1,5 +1,7 @@
 package urlshortener;
 
+import urlshortener.raft.LogEntry;
+
 public class PutLogEntry extends LogEntry {
     private String key;
     private String value;

@@ -1,4 +1,4 @@
-package urlshortener;
+package urlshortener.raft;
 
 public class RaftResponse<T> {
     private int term;
