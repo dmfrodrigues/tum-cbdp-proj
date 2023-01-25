@@ -3,7 +3,6 @@ package urlshortener;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.rmi.AlreadyBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -17,10 +16,7 @@ public class App {
             register();
 
             if(args.length >= 2 && args[0].equals("-j")){
-                String[] peerAddressParts = args[1].split(":");
-                String peerHost = peerAddressParts[0];
-                int peerPort = Integer.parseInt(peerAddressParts[1]);
-                InetSocketAddress peerAddress = new InetSocketAddress(peerHost, peerPort);
+                String peerAddress = args[1];
                 node.joinNetwork(peerAddress);
             }
         } catch (Exception e) {
@@ -37,7 +33,7 @@ public class App {
 
     private static void register(int port) throws AlreadyBoundException, IOException {
         // Instantiating the implementation class
-        InetSocketAddress myAddress = new InetSocketAddress(InetAddress.getLocalHost(), port);
+        String myAddress = InetAddress.getLocalHost().getHostAddress();
         node = new Node(myAddress);
 
         // Exporting the object of implementation class
