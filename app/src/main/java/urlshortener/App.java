@@ -3,21 +3,38 @@ package urlshortener;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.rmi.AlreadyBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import com.sun.net.httpserver.HttpServer;
 
 import urlshortener.raft.Raft;
 import urlshortener.raft.RaftRemote;
+import urlshortener.server.UrlShortenerHttpHandler;
+import urlshortener.urlshortener.UrlShortener;
+import urlshortener.urlshortener.UrlShortenerHash;
 
 public class App {
+    static UrlShortener urlShortener;
+
     static Raft raft;
     static Node node;
 
+    static ThreadPoolExecutor serverThreadPoolExecutor = (ThreadPoolExecutor)Executors.newFixedThreadPool(2);
+    static HttpServer server;
+
     public static void main(String args[]) {
         try {
+            createUrlShortener();
+
             register();
+
+            server();
 
             if(args.length >= 2 && args[0].equals("-j")){
                 String peerAddress = args[1];
@@ -27,8 +44,10 @@ public class App {
             e.printStackTrace();
             return;
         }
+    }
 
-        System.err.println("Server ready");
+    private static void createUrlShortener(){
+        urlShortener = new UrlShortenerHash();
     }
 
     private static void register() throws AlreadyBoundException, IOException{
@@ -52,5 +71,16 @@ public class App {
 
         File file = new File("/tmp/registered");
         file.createNewFile();
+
+        System.err.println("Raft registered to RMI registry");
+    }
+
+    private static void server() throws IOException {
+        server = HttpServer.create(new InetSocketAddress("0.0.0.0", 8001), 0);
+        server.createContext("/", new UrlShortenerHttpHandler(urlShortener));
+        server.setExecutor(serverThreadPoolExecutor);
+        server.start();
+
+        System.err.println("Server running");
     }
 }

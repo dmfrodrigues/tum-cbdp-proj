@@ -3,7 +3,7 @@ version: "3.8"
 services:
 
   leader:
-    container_name: leader
+    container_name: url-shortener_leader
     build: .
     healthcheck:
       test: "[ -f /tmp/registered ]"
@@ -11,6 +11,8 @@ services:
       interval: 1s
       timeout: 1s
       retries: 50
+    ports:
+      - 8001:8001
 
   peer:
     build: .

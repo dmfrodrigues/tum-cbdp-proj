@@ -70,7 +70,7 @@ public class Raft implements RaftRemote {
     @Override
     public void joinRPC() throws RemoteException, ServerNotActiveException {
         if(state != State.LEADER){
-            throw new InvalidStateError("Can only call join(InetSocketAddress) if the callee is a leader");
+            throw new InvalidStateError("Can only call joinRPC() if the callee is a leader");
         }
         String newPeerAddress = RemoteServer.getClientHost();
         members.add(newPeerAddress);
