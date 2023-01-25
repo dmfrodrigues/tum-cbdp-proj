@@ -24,11 +24,12 @@ public class UrlShortenerHttpHandler implements HttpHandler {
         StringBuilder stringBuilder = new StringBuilder();
 
         switch(httpExchange.getRequestMethod()){
-            case "PUT":
+            case "PUT": {
                 Scanner s = new Scanner(is).useDelimiter("\\A");
                 String value = (s.hasNext() ? s.next() : "");
+                s.close();
 
-                System.out.println("Got request PUT " + value);
+                System.out.println("PUT " + value);
 
                 String key = urlShortener.shorten(value);
 
@@ -41,11 +42,31 @@ public class UrlShortenerHttpHandler implements HttpHandler {
                 os.close();
 
                 break;
-            case "GET":
-                System.out.println("Got request GET");
+            }
+            case "GET": {
+                String[] uriParts = httpExchange.getRequestURI().toString().split("/");
+                String key = uriParts[uriParts.length-1];
 
-                httpExchange.sendResponseHeaders(405, 0);
+                System.out.println("GET " + key);
+
+                String url = urlShortener.enlongate(key);
+
+                if(url == null){
+                    httpExchange.sendResponseHeaders(404, 0);
+                    os.flush();
+                    os.close();
+                    return;
+                }
+
+                httpExchange.getResponseHeaders().set("Location", url);
+
+                httpExchange.sendResponseHeaders(301, 0);
+
+                os.flush();
+                os.close();
+
                 break;
+            }
             default:
                 httpExchange.sendResponseHeaders(405, 0);
                 return;

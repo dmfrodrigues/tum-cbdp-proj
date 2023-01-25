@@ -5,6 +5,7 @@ ENV POSTGRES_PASSWORD=1234
 RUN apk update
 RUN apk --no-cache add \
     curl \
+    java-postgresql-jdbc \
     postgresql
 
 # Set up gradle

@@ -8,6 +8,7 @@ import java.rmi.AlreadyBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.SQLException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -16,10 +17,12 @@ import com.sun.net.httpserver.HttpServer;
 import urlshortener.raft.Raft;
 import urlshortener.raft.RaftRemote;
 import urlshortener.server.UrlShortenerHttpHandler;
+import urlshortener.urlshortener.Database;
 import urlshortener.urlshortener.UrlShortener;
 import urlshortener.urlshortener.UrlShortenerHash;
 
 public class App {
+    static Database db;
     static UrlShortener urlShortener;
 
     static Raft raft;
@@ -46,8 +49,17 @@ public class App {
         }
     }
 
-    private static void createUrlShortener(){
-        urlShortener = new UrlShortenerHash();
+    private static void createUrlShortener() throws SQLException {
+        String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
+        db = new Database("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+
+        System.out.println("Database connected");
+
+        db.seed();
+
+        urlShortener = new UrlShortenerHash(db);
+
+        System.out.println("URL shortener created");
     }
 
     private static void register() throws AlreadyBoundException, IOException{
