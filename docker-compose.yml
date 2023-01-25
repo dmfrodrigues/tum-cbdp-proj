@@ -17,4 +17,4 @@ services:
     depends_on:
       leader:
         condition: service_healthy
-    command: ["./run.join.sh", "leader"]
+    command: ["./run.join.sh", "leader:1099"]

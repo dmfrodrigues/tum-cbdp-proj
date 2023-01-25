@@ -2,22 +2,26 @@ package urlshortener;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.rmi.AlreadyBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
-public class App extends Node {
+public class App {
+    static Node node;
+
     public static void main(String args[]) {
         try {
             register();
 
             if(args.length >= 2 && args[0].equals("-j")){
-                String peerHost = args[1];
-                System.out.println("Joining " + peerHost);
-                Registry registry = LocateRegistry.getRegistry(peerHost);
-                Stub stub = (Stub)registry.lookup("node");
-                stub.join();
+                String[] peerAddressParts = args[1].split(":");
+                String peerHost = peerAddressParts[0];
+                int peerPort = Integer.parseInt(peerAddressParts[1]);
+                InetSocketAddress peerAddress = new InetSocketAddress(peerHost, peerPort);
+                node.joinNetwork(peerAddress);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -27,13 +31,18 @@ public class App extends Node {
         System.err.println("Server ready");
     }
 
-    private static void register() throws AlreadyBoundException, IOException {
+    private static void register() throws AlreadyBoundException, IOException{
+        register(Registry.REGISTRY_PORT);
+    }
+
+    private static void register(int port) throws AlreadyBoundException, IOException {
         // Instantiating the implementation class
-        Node obj = new Node();
+        InetSocketAddress myAddress = new InetSocketAddress(InetAddress.getLocalHost(), port);
+        node = new Node(myAddress);
 
         // Exporting the object of implementation class
         // (here we are exporting the remote object to the stub)
-        Stub stub = (Stub) UnicastRemoteObject.exportObject(obj, 0);
+        NodeRemote stub = (NodeRemote) UnicastRemoteObject.exportObject(node, 0);
 
         // Binding the remote object (stub) in the registry
         Registry registry = LocateRegistry.getRegistry();
