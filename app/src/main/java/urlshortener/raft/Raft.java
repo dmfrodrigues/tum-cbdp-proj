@@ -25,7 +25,7 @@ public class Raft implements RaftRemote {
     // Persistent state
     int currentTerm = 0;
     String votedFor;
-    ArrayList<LogEntry> log = new ArrayList();
+    ArrayList<LogEntry> log = new ArrayList<>();
 
     // Volatile state
     int commitIndex = 0;
