@@ -33,7 +33,7 @@ public class UrlShortenerHttpHandler implements HttpHandler {
 
                 String key = urlShortener.shorten(value);
 
-                stringBuilder.append("http://localhost:8001/" + key);
+                stringBuilder.append("http://0.0.0.0:8001/" + key); // TODO: this port number must be the external port number of the container, not the internal port number
 
                 String response = stringBuilder.toString();
                 httpExchange.sendResponseHeaders(200, response.length());

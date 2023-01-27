@@ -15,7 +15,7 @@ def getContainerNames():
     out = subprocess.check_output(cmd)
     out = out.decode('utf-8').split('\n')
     out = map(lambda s: s[1:-1], out)
-    out = filter(lambda s: s.startswith("url-shortener_"), out)
+    out = filter(lambda s: s.startswith("url-shortener_leader") or s.startswith("url-shortener_peer"), out)
     return list(out)
 
 def waitUntilContainerHealthy(containerName: str):
@@ -25,10 +25,12 @@ def waitUntilContainerHealthy(containerName: str):
     print("Container " + containerName + " is healthy")
 
 def spinUpCluster(numberPeers: int):
+    scale = numberPeers-1
     print("Spin up cluster")
-    assert(os.system("docker-compose up --build -d") == 0)
+    assert(os.system(f"docker-compose up --build -d --scale peer={scale}") == 0)
     print("Detached from cluster")
-    waitUntilContainerHealthy("url-shortener_leader")
+    for peer in getContainerNames():
+        waitUntilContainerHealthy(peer)
     print("All containers healthy")
     peers = getContainerNames()
     return peers, 'url-shortener_leader'
@@ -37,5 +39,5 @@ def killCluster():
     assert(os.system("docker-compose down") == 0)
 
 def getContainerAddress(containerName: str):
-    port = subprocess.check_output(["docker", "port", containerName]).decode('utf-8').split('\n')[0].split('/')[0]
-    return "http://localhost:" + port
+    address = subprocess.check_output(["docker", "port", containerName]).decode('utf-8').split('\n')[0].split(' -> ')[1]
+    return "http://" + address

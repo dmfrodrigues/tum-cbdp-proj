@@ -19,7 +19,15 @@ services:
     depends_on:
       leader:
         condition: service_healthy
+    healthcheck:
+      test: "[ -f /tmp/registered ]"
+      start_period: 10s
+      interval: 1s
+      timeout: 1s
+      retries: 50
     command: ["./run.join.sh", "leader"]
+    ports:
+      - 8001
 
   db_admin:
     build: ./db_admin
