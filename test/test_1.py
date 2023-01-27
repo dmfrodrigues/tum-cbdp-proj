@@ -42,7 +42,7 @@ def getContainerAddress(containerName: str):
     port = subprocess.check_output(["docker", "port", containerName]).decode('utf-8').split('\n')[0].split('/')[0]
     return "http://localhost:" + port
 
-class TestClass(unittest.TestCase):
+class TestSingleNode(unittest.TestCase):
     def setUp(self):
         self.peers, self.leader = spinUpCluster(1)
 
