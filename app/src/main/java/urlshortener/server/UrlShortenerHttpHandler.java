@@ -33,7 +33,7 @@ public class UrlShortenerHttpHandler implements HttpHandler {
 
                 String key = urlShortener.shorten(value);
 
-                stringBuilder.append("localhost:8001/" + key);
+                stringBuilder.append("http://localhost:8001/" + key);
 
                 String response = stringBuilder.toString();
                 httpExchange.sendResponseHeaders(200, response.length());

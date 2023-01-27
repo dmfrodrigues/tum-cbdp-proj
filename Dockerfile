@@ -43,4 +43,6 @@ RUN chmod 777 /init_db.sh
 
 RUN chmod +x *.sh
 
+RUN ./gradlew assemble
+
 CMD ["./run.sh"]
