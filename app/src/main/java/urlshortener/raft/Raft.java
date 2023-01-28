@@ -8,9 +8,13 @@ import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Raft implements RaftRemote {
     private static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
@@ -20,6 +24,14 @@ public class Raft implements RaftRemote {
     }
 
     static private long LEADER_HEARTBEAT_MILLIS = 500;
+    static private long FOLLOWER_TIMEOUT_MIN_MILLIS = 1000;
+    static private long FOLLOWER_TIMEOUT_MAX_MILLIS = 2000;
+
+    private long FOLLOWER_TIMEOUT_MILLIS;
+
+    // Minimum amount that follower sleeps between loop executions.
+    // This allows to release some CPU time.
+    private long FOLLOWER_SLEEP_MILLIS = 50;
 
     public enum State {
         FOLLOWER,
@@ -31,7 +43,7 @@ public class Raft implements RaftRemote {
     String leaderAddress;
     State state;
 
-    ArrayList<String> members = new ArrayList<>();
+    Set<String> members = new HashSet<>();
 
     // Persistent state
     // TODO: all the persistent state variables must be stored in secondary
@@ -48,6 +60,9 @@ public class Raft implements RaftRemote {
     Map<String, Integer> nextIndex = null;
     Map<String, Integer> matchIndex = null;
 
+    // Volatile state on followers
+    AtomicLong heartbeatTimestampNanos = new AtomicLong(System.currentTimeMillis());
+
     public Raft(String myAddress){
         this.myAddress = myAddress;
         this.leaderAddress = myAddress;
@@ -56,7 +71,12 @@ public class Raft implements RaftRemote {
         nextIndex = new HashMap<>();
         matchIndex = new HashMap<>();
 
-        System.out.println("Created node with address " + myAddress);
+        int seed = myAddress.hashCode();
+        long r = new Random(seed).nextLong();
+        FOLLOWER_TIMEOUT_MILLIS = FOLLOWER_TIMEOUT_MIN_MILLIS +
+            (r % (FOLLOWER_TIMEOUT_MAX_MILLIS - FOLLOWER_TIMEOUT_MIN_MILLIS));
+
+        System.out.println("Created node with address " + myAddress + ", timeout " + FOLLOWER_TIMEOUT_MILLIS + "ms");
     }
 
     @Override
@@ -86,6 +106,7 @@ public class Raft implements RaftRemote {
         state = State.FOLLOWER;
         nextIndex = null;
         matchIndex = null;
+        heartbeatTimestampNanos.set(System.nanoTime());
     }
 
     @Override
@@ -104,6 +125,9 @@ public class Raft implements RaftRemote {
 
     @Override
     public RaftResponse<Boolean> appendEntriesRPC(int term, int prevLogIndex, int prevLogTerm, List<LogEntry> entries, int leaderCommit) {
+        // Initial work
+        heartbeatTimestampNanos.set(System.nanoTime());
+
         // 1.
         if(term < currentTerm)
             return new RaftResponse<Boolean>(currentTerm, false);
@@ -154,6 +178,7 @@ public class Raft implements RaftRemote {
             candidateLogIsAtLeastAsUpToDateAsReceiverLog
         ){
             votedFor = candidateAddress;
+            System.out.println("Candidate " + candidateAddress + " asked me to vote for term " + term + ", I said YES");
             return new RaftResponse<Boolean>(currentTerm, true);
         }
 
@@ -166,7 +191,7 @@ public class Raft implements RaftRemote {
         return new RaftResponse<Boolean>(currentTerm, false);
     }
 
-    public void run() throws InterruptedException, NotBoundException {
+    public void run() throws InterruptedException, NotBoundException, ServerNotActiveException {
         while(true){
             synchronized(state){
                 switch(state){
@@ -189,7 +214,7 @@ public class Raft implements RaftRemote {
     private void loopLeader() throws InterruptedException, NotBoundException {
         long tBeginNanos = System.nanoTime();
         synchronized(members){
-            ListIterator<String> it = members.listIterator();
+            Iterator<String> it = members.iterator();
             while(it.hasNext()){
                 String peerAddress = it.next();
                 if(peerAddress.equals(myAddress)) continue;
@@ -215,11 +240,64 @@ public class Raft implements RaftRemote {
         Thread.sleep(LEADER_HEARTBEAT_MILLIS-elapsedMillis);
     }
 
-    private void loopFollower(){
-        // TODO
+    private void loopFollower() throws InterruptedException {
+        long nowMillis = System.nanoTime()/1000000;
+        long heartbeatTimestampMillis = heartbeatTimestampNanos.get()/1000000;
+        long elapsedMillis = nowMillis - heartbeatTimestampMillis;
+        // System.out.println("Elapsed: " + elapsedMillis);
+        if(elapsedMillis > FOLLOWER_TIMEOUT_MILLIS){
+            System.out.println("Suspect leader is dead, I am now a candidate");
+            members.remove(leaderAddress);
+            state = State.CANDIDATE;
+            return;
+        }
+
+        long sleepUntilMillis = heartbeatTimestampMillis + FOLLOWER_TIMEOUT_MILLIS;
+        nowMillis = System.nanoTime()/1000000;
+        long delta = Math.max(sleepUntilMillis - nowMillis, FOLLOWER_SLEEP_MILLIS);
+        Thread.sleep(delta);
     }
 
-    private void loopCandidate(){
-        // TODO
+    // Start election
+    private void loopCandidate() throws NotBoundException, ServerNotActiveException {
+        ++currentTerm;
+        votedFor = myAddress;
+
+        System.out.println("Starting election for term " + currentTerm);
+
+        // This node is alone, so he is automatically the leader
+        if(members.size() <= 1){
+            state = State.LEADER;
+            System.out.println("Got elected leader for term " + currentTerm);
+            return;
+        }
+
+        int numberVotes = 1;
+
+        Iterator<String> it = members.iterator();
+        while(state == State.CANDIDATE && it.hasNext()){
+            String peerAddress = it.next();
+            if(peerAddress.equals(myAddress)) continue;
+
+            try {
+                RaftRemote peer = Raft.connect(peerAddress);
+                RaftResponse<Boolean> response = peer.requestVoteRPC(currentTerm, log.size()-1, log.get(log.size()-1).term);
+                if(response.get()){
+                    System.out.println("Got vote from " + peerAddress);
+                    ++numberVotes;
+                }
+                // TODO: do something with the term in the response
+            } catch (RemoteException e) {
+                System.err.println("Peer " + peerAddress + " is not working, removing from members");
+                it.remove();
+            }
+
+            if(numberVotes >= members.size()/2 + 1){
+                state = State.LEADER;
+                System.out.println("Got elected leader for term " + currentTerm);
+                break;
+            }
+        }
+
     }
 }

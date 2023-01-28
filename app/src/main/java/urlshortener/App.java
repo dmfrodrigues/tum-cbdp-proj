@@ -64,7 +64,7 @@ public class App {
 
         urlShortener = new UrlShortenerHash(db);
 
-        System.out.println("URL shortener created");
+        // System.out.println("URL shortener created");
     }
 
     private static void register() throws AlreadyBoundException, IOException{
@@ -95,7 +95,7 @@ public class App {
             e.printStackTrace();
         } }));
 
-        System.err.println("Raft registered to RMI registry");
+        // System.err.println("Raft registered to RMI registry");
     }
 
     private static void server() throws IOException {
