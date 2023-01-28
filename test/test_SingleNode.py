@@ -13,17 +13,19 @@ class TestSingleNode(unittest.TestCase):
 
     def testPutGet(self):
         # Test not found
-        r = requests.get(utils.getContainerAddress(self.leader) + "/12345678", allow_redirects=False)
+        shortenedUrl = utils.getShortenedUrl(self.leader, "12345678")
+        r = requests.get(shortenedUrl, allow_redirects=False)
         self.assertEqual(r.status_code, 404)
 
         # Test shortening URL
         url = "https://www.tum.de/"
 
-        r = requests.put(utils.getContainerAddress(self.leader), data=url)
+        r = requests.put(utils.getAddress(self.leader), data=url)
         self.assertEqual(r.status_code, 200)
         shortened = r.text
 
-        r = requests.get(utils.getContainerAddress(self.leader) + "/" + shortened, allow_redirects=False)
+        shortenedUrl = utils.getShortenedUrl(self.leader, shortened)
+        r = requests.get(shortenedUrl, allow_redirects=False)
         self.assertEqual(r.status_code, 301)
         urlGet = r.headers['Location']
 
@@ -41,7 +43,7 @@ class TestSingleNode(unittest.TestCase):
         
         shortened = []
         for i in range(N):
-            r = requests.put(utils.getContainerAddress(self.leader), data=urls[i])
+            r = requests.put(utils.getAddress(self.leader), data=urls[i])
             self.assertEqual(r.status_code, 200)
             shortened.append(r.text)
 
@@ -49,7 +51,8 @@ class TestSingleNode(unittest.TestCase):
         t = time.time()
 
         for i in range(N):
-            r = requests.get(utils.getContainerAddress(self.leader) + "/" + shortened[i], allow_redirects=False)
+            shortenedUrl = utils.getShortenedUrl(self.leader, shortened[i])
+            r = requests.get(shortenedUrl, allow_redirects=False)
             self.assertEqual(r.status_code, 301)
             urlGet = r.headers['Location']
 
