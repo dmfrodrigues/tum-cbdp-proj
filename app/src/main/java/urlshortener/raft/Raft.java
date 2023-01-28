@@ -10,6 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Raft implements RaftRemote {
+    private static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
+        Registry peerRegistry = LocateRegistry.getRegistry(peerAddress);
+        RaftRemote peer = (RaftRemote)peerRegistry.lookup("raft");
+        return peer;
+    }
+
     public enum State {
         FOLLOWER,
         CANDIDATE,
@@ -56,8 +62,7 @@ public class Raft implements RaftRemote {
      * @throws ServerNotActiveException
      */
     public void join(String peerAddress) throws RemoteException, NotBoundException, ServerNotActiveException {
-        Registry peerRegistry = LocateRegistry.getRegistry(peerAddress);
-        RaftRemote peer = (RaftRemote)peerRegistry.lookup("raft");
+        RaftRemote peer = connect(peerAddress);
         leaderAddress = peer.getLeaderAddress();
 
         System.out.println("Joining leader at " + leaderAddress);
