@@ -1,4 +1,4 @@
-FROM amazoncorretto:17-alpine
+FROM amazoncorretto:17-alpine AS peer
 
 ENV POSTGRES_PASSWORD=1234
 
@@ -41,8 +41,13 @@ COPY . .
 RUN mv init_db.sh /init_db.sh
 RUN chmod 777 /init_db.sh
 
-RUN chmod +x *.sh
+RUN chmod +x *.sh gradlew
 
 RUN ./gradlew assemble
+
+ENV CBDP_LEADER leader
+CMD exec ./run.join.sh "$CBDP_LEADER"
+
+FROM peer as leader
 
 CMD ["./run.sh"]

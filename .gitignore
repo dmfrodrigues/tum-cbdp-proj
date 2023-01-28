@@ -9,3 +9,6 @@ app/bin
 .vscode
 
 __pycache__
+
+# Deployment secrets
+.env
