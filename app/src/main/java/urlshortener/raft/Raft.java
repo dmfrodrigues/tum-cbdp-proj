@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Raft implements RaftRemote {
@@ -47,7 +50,10 @@ public class Raft implements RaftRemote {
     String leaderAddress;
     State state;
 
+    // Time between consecutive members gossip
+    static private long LEADER_JOIN_GOSSIP_MILLIS = 1000;
     Set<String> members = new HashSet<>();
+    ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 
     // Persistent state
     // TODO: all the persistent state variables must be stored in secondary
@@ -107,16 +113,71 @@ public class Raft implements RaftRemote {
         Registry leaderRegistry = LocateRegistry.getRegistry(leaderAddress);
         RaftRemote leader = (RaftRemote)leaderRegistry.lookup("raft");
         
-        leader.joinRPC();
-
         state = State.FOLLOWER;
         nextIndex = null;
         matchIndex = null;
+
+        members = leader.joinRPC();
+        System.out.println("Joined leader, got list of members: [" + String.join(", ") + "]");
+
         heartbeatTimestampNanos.set(System.nanoTime());
+
+        startMembersGossip();
+    }
+
+    public void startMembersGossip(){
+        Runnable membersGossipRunnable = new Runnable() {
+            public void run() {
+                synchronized(members){
+                    System.out.println("Gossipping; members list is [" + String.join(", ", members) + "]");
+                    // while(members.size() > 1){
+                    //     String peerAddress = null;
+
+                    //     int r = random.nextInt() % members.size();
+                    //     Iterator<String> it = members.iterator();
+                    //     while(r > 0){
+                    //         --r;
+                    //         peerAddress = it.next();
+                    //     }
+                    //     if(peerAddress == null || peerAddress.equals(myAddress)){
+                    //         peerAddress = null;
+                    //         continue;
+                    //     }
+                    //     try {
+                    //         RaftRemote peer = Raft.connect(peerAddress);
+                    //         Set<String> newMembers = peer.membersGossipRPC(members);
+                    //         members.addAll(newMembers);
+                    //         System.out.println("Gossipped with " + peerAddress + " about network members");
+                    //         System.out.println("Gossip response: just learned about members [" + String.join(", ") + "]");
+                    //         return;
+                    //     } catch (RemoteException e) {
+                    //         System.err.println("Peer " + peerAddress + " is not working, removing from members");
+                    //         it.remove();
+                    //     } catch (NotBoundException e) {
+                    //         e.printStackTrace();
+                    //         return;
+                    //     }
+                    // }
+                }
+            }
+        };
+
+        executor.scheduleAtFixedRate(membersGossipRunnable, 0, LEADER_JOIN_GOSSIP_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     @Override
-    public void joinRPC() throws RemoteException, ServerNotActiveException {
+    public Set<String> membersGossipRPC(Set<String> members) throws RemoteException {
+        members.removeAll(this.members);
+        System.out.println("Gossip request: just learned about members [" + String.join(", ") + "]");
+
+        this.members.addAll(members);
+        Set<String> ret = new HashSet<>(this.members);
+        ret.removeAll(members);
+        return ret;
+    }
+
+    @Override
+    public Set<String> joinRPC() throws RemoteException, ServerNotActiveException, NotBoundException {
         if(state != State.LEADER){
             throw new InvalidStateError("Can only call joinRPC() if the callee is a leader");
         }
@@ -125,8 +186,33 @@ public class Raft implements RaftRemote {
             members.add(newPeerAddress);
             nextIndex.put(newPeerAddress, 0);
             matchIndex.put(newPeerAddress, -1);
+        
+            // Inform all members that a new peer has joined
+            Iterator<String> it = members.iterator();
+            while(it.hasNext()){
+                String peerAddress = it.next();
+                if(peerAddress.equals(myAddress) || peerAddress.equals(newPeerAddress)) continue;
+                try {
+                    RaftRemote peer = Raft.connect(peerAddress);
+                    peer.addMemberRPC(newPeerAddress);
+                } catch (RemoteException e) {
+                    System.err.println("Peer " + peerAddress + " is not working, removing from members");
+                    it.remove();
+                }
+            }
+            System.out.println("Node " + newPeerAddress + " joined the network");
+
+            return members;
         }
-        System.out.println("Node " + newPeerAddress + " joined the network");
+    }
+
+    @Override
+    public void addMemberRPC(String newPeerAddress) throws RemoteException, NotBoundException {
+        if(state != State.FOLLOWER){
+            throw new InvalidStateError("Can only call addMemberRPC() if the callee is a follower");
+        }
+        members.add(newPeerAddress);
+        System.out.println("addMemberRPC: added " + newPeerAddress);
     }
 
     @Override
@@ -287,7 +373,11 @@ public class Raft implements RaftRemote {
 
             try {
                 RaftRemote peer = Raft.connect(peerAddress);
-                RaftResponse<Boolean> response = peer.requestVoteRPC(currentTerm, log.size()-1, log.get(log.size()-1).term);
+                RaftResponse<Boolean> response = peer.requestVoteRPC(
+                    currentTerm,
+                    log.size()-1,
+                    (log.size() >= 1 ? log.get(log.size()-1).term : -1)
+                );
                 if(response.get()){
                     System.out.println("Got vote from " + peerAddress);
                     ++numberVotes;

@@ -1,9 +1,11 @@
 package urlshortener.raft;
 
+import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.server.ServerNotActiveException;
 import java.util.List;
+import java.util.Set;
 
 public interface RaftRemote extends Remote {
     public String getLeaderAddress() throws RemoteException;
@@ -16,8 +18,33 @@ public interface RaftRemote extends Remote {
      * 
      * @throws RemoteException
      * @throws ServerNotActiveException
+     * @throws NotBoundException
      */
-    public void joinRPC() throws RemoteException, ServerNotActiveException;
+    public Set<String> joinRPC() throws RemoteException, ServerNotActiveException, NotBoundException;
+
+    /**
+     * RPC. Leader informs followers of the entry of a new member.
+     * 
+     * The semantics of this function is: "the caller (the leader)
+     * informs the callee (a follower) that a new node with address 
+     * newPeerAddress has joined the network".
+     * 
+     * @param newPeerAddress    Address of the new peer
+     * @throws RemoteException
+     * @throws NotBoundException
+     */
+    public void addMemberRPC(String newPeerAddress) throws RemoteException, NotBoundException;
+
+    /**
+     * RPC. Gossip about the members of the network.
+     * 
+     * The semantics of this function is: "the caller provides the set of
+     * members it knows to the callee, and the callee replies with the set of
+     * members it knows, and that were not in the caller's set of members".
+     * 
+     * @return  Set of members that the callee did not know
+     */
+    public Set<String> membersGossipRPC(Set<String> members) throws RemoteException;
 
     /**
      * RPC. Append entries.
