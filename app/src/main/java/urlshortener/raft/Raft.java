@@ -35,6 +35,8 @@ public class Raft implements RaftRemote {
     // This allows to release some CPU time.
     private long FOLLOWER_SLEEP_MILLIS = 50;
 
+    private Random random;
+
     public enum State {
         FOLLOWER,
         CANDIDATE,
@@ -74,7 +76,9 @@ public class Raft implements RaftRemote {
         matchIndex = new HashMap<>();
 
         int seed = myAddress.hashCode();
-        long r = new Random(seed).nextLong();
+        random = new Random(seed);
+
+        long r = random.nextLong();
         FOLLOWER_TIMEOUT_MILLIS = FOLLOWER_TIMEOUT_MIN_MILLIS +
             (r % (FOLLOWER_TIMEOUT_MAX_MILLIS - FOLLOWER_TIMEOUT_MIN_MILLIS));
 
