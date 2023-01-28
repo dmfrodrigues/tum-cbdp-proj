@@ -23,6 +23,8 @@ public class Raft implements RaftRemote {
     ArrayList<String> members = new ArrayList<>();
 
     // Persistent state
+    // TODO: all the persistent state variables must be stored in secondary
+    // memory
     int currentTerm = 0;
     String votedFor;
     ArrayList<LogEntry> log = new ArrayList<>();
