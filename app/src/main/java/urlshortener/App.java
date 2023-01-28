@@ -45,6 +45,9 @@ public class App {
                 String peerAddress = args[1];
                 node.join(peerAddress);
             }
+
+            raft.run();
+
         } catch (Exception e) {
             e.printStackTrace();
             return;
