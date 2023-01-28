@@ -1,11 +1,13 @@
 package urlshortener.raft;
 
+import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -299,5 +301,15 @@ public class Raft implements RaftRemote {
             }
         }
 
+    }
+
+    public void register() throws RemoteException, AlreadyBoundException {
+        Registry registry = LocateRegistry.getRegistry();
+        RaftRemote stub = (RaftRemote) UnicastRemoteObject.exportObject(this, 0);
+        registry.bind("raft", stub);
+    }
+    public void deregister() throws RemoteException, NotBoundException{
+        Registry registry = LocateRegistry.getRegistry();
+        registry.unbind("raft");
     }
 }

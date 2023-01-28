@@ -77,20 +77,13 @@ public class App {
         raft = new Raft(myAddress);
         node = new Node(raft);
 
-        // Exporting the object of implementation class
-        // (here we are exporting the remote object to the stub)
-        RaftRemote stub = (RaftRemote) UnicastRemoteObject.exportObject(raft, 0);
-
-        // Binding the remote object (stub) in the registry
-        Registry registry = LocateRegistry.getRegistry();
-
-        registry.bind("raft", stub);
+        raft.register();
 
         File file = new File("/tmp/registered");
         file.createNewFile();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> { try {
-            registry.unbind("raft");
+            raft.deregister();
         } catch (RemoteException | NotBoundException e) {
             e.printStackTrace();
         } }));
