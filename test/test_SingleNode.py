@@ -23,7 +23,7 @@ class TestSingleNode(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         shortened = r.text
 
-        r = requests.get(shortened, allow_redirects=False)
+        r = requests.get(utils.getContainerAddress(self.leader) + "/" + shortened, allow_redirects=False)
         self.assertEqual(r.status_code, 301)
         urlGet = r.headers['Location']
 
@@ -49,7 +49,7 @@ class TestSingleNode(unittest.TestCase):
         t = time.time()
 
         for i in range(N):
-            r = requests.get(shortened[i], allow_redirects=False)
+            r = requests.get(utils.getContainerAddress(self.leader) + "/" + shortened[i], allow_redirects=False)
             self.assertEqual(r.status_code, 301)
             urlGet = r.headers['Location']
 

@@ -31,9 +31,7 @@ class TestTwoNodes(unittest.TestCase):
 
         for peer in self.peers:
             peerAddress = utils.getContainerAddress(peer)
-            newShortened = shortened.replace(leaderAddress, peerAddress)
-            print("peerAddress=" + peerAddress + ", newShortened=" + newShortened)
-            r = requests.get(shortened, allow_redirects=False)
+            r = requests.get(utils.getContainerAddress(self.leader) + "/" + shortened, allow_redirects=False)
             self.assertEqual(r.status_code, 301)
             urlGet = r.headers['Location']
 

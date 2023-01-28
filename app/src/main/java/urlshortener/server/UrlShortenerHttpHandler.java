@@ -33,7 +33,7 @@ public class UrlShortenerHttpHandler implements HttpHandler {
 
                 String key = urlShortener.shorten(value);
 
-                stringBuilder.append("http://0.0.0.0:8001/" + key); // TODO: a peer should only return the key, not including its own (internal or external) port number
+                stringBuilder.append(key);
 
                 String response = stringBuilder.toString();
                 httpExchange.sendResponseHeaders(200, response.length());
