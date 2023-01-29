@@ -84,9 +84,7 @@ public class Raft implements RaftRemote {
         int seed = myAddress.hashCode();
         random = new Random(seed);
 
-        long r = random.nextLong();
-        FOLLOWER_TIMEOUT_MILLIS = FOLLOWER_TIMEOUT_MIN_MILLIS +
-            (r % (FOLLOWER_TIMEOUT_MAX_MILLIS - FOLLOWER_TIMEOUT_MIN_MILLIS));
+        FOLLOWER_TIMEOUT_MILLIS = Utils.Rand.inRange(random, FOLLOWER_TIMEOUT_MIN_MILLIS, FOLLOWER_TIMEOUT_MAX_MILLIS);
 
         System.out.println("Created node with address " + myAddress + ", timeout " + FOLLOWER_TIMEOUT_MILLIS + "ms");
     }
