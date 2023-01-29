@@ -112,17 +112,19 @@ public class Raft implements RaftRemote {
 
         Registry leaderRegistry = LocateRegistry.getRegistry(leaderAddress);
         RaftRemote leader = (RaftRemote)leaderRegistry.lookup("raft");
-        
-        state = State.FOLLOWER;
-        nextIndex = null;
-        matchIndex = null;
+            
+        synchronized(state){
+            state = State.FOLLOWER;
+            nextIndex = null;
+            matchIndex = null;
 
-        members = leader.joinRPC();
-        System.out.println("Joined leader, got list of members: [" + String.join(", ") + "]");
+            members = leader.joinRPC();
+            System.out.println("Joined leader, got list of members: [" + String.join(", ", members) + "]");
 
-        heartbeatTimestampNanos.set(System.nanoTime());
+            startMembersGossip();
 
-        startMembersGossip();
+            heartbeatTimestampNanos.set(System.nanoTime());
+        }
     }
 
     public void startMembersGossip(){
