@@ -216,7 +216,7 @@ public class Raft implements RaftRemote {
             throw new InvalidStateError("Can only call addMemberRPC() if the callee is a follower");
         }
         synchronized(members){ members.add(newPeerAddress); }
-        System.out.println("addMemberRPC: added " + newPeerAddress);
+        System.out.println("Unlocked members (addMemberRPC)");
     }
 
     @Override
