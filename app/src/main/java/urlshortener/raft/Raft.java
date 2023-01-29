@@ -276,7 +276,7 @@ public class Raft implements RaftRemote {
         if(term < currentTerm)
             return new RaftResponse<Boolean>(currentTerm, false);
 
-        boolean candidateLogIsAtLeastAsUpToDateAsReceiverLog = true;
+        boolean candidateLogIsAtLeastAsUpToDateAsReceiverLog = true; // TODO
 
         if(
             (votedFor == null || votedFor.equals(candidateAddress)) &&
@@ -284,6 +284,7 @@ public class Raft implements RaftRemote {
         ){
             votedFor = candidateAddress;
             System.out.println("Candidate " + candidateAddress + " asked me to vote for term " + term + ", I said YES");
+            heartbeatTimestampNanos.set(System.nanoTime());
             return new RaftResponse<Boolean>(currentTerm, true);
         }
 
