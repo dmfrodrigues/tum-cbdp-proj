@@ -371,41 +371,43 @@ public class Raft implements RaftRemote {
 
         System.out.println("Starting election for term " + currentTerm);
 
-        // This node is alone, so he is automatically the leader
-        if(members.size() <= 1){
-            state = State.LEADER;
-            System.out.println("Got elected leader for term " + currentTerm);
-            return;
-        }
-
-        int numberVotes = 1;
-
-        Iterator<String> it = members.iterator();
-        while(state == State.CANDIDATE && it.hasNext()){
-            String peerAddress = it.next();
-            if(peerAddress.equals(myAddress)) continue;
-
-            try {
-                RaftRemote peer = Raft.connect(peerAddress);
-                RaftResponse<Boolean> response = peer.requestVoteRPC(
-                    currentTerm,
-                    log.size()-1,
-                    (log.size() >= 1 ? log.get(log.size()-1).term : -1)
-                );
-                if(response.get()){
-                    System.out.println("Got vote from " + peerAddress);
-                    ++numberVotes;
-                }
-                // TODO: do something with the term in the response
-            } catch (RemoteException e) {
-                System.err.println("Peer " + peerAddress + " is not working, removing from members");
-                it.remove();
-            }
-
-            if(numberVotes >= members.size()/2 + 1){
+        synchronized(members){
+            // This node is alone, so he is automatically the leader
+            if(members.size() <= 1){
                 state = State.LEADER;
                 System.out.println("Got elected leader for term " + currentTerm);
-                break;
+                return 0;
+            }
+
+            int numberVotes = 1;
+
+            Iterator<String> it = members.iterator();
+            while(state == State.CANDIDATE && it.hasNext()){
+                String peerAddress = it.next();
+                if(peerAddress.equals(myAddress)) continue;
+
+                try {
+                    RaftRemote peer = Raft.connect(peerAddress);
+                    RaftResponse<Boolean> response = peer.requestVoteRPC(
+                        currentTerm,
+                        log.size()-1,
+                        (log.size() >= 1 ? log.get(log.size()-1).term : -1)
+                    );
+                    if(response.get()){
+                        System.out.println("Got vote from " + peerAddress);
+                        ++numberVotes;
+                    }
+                    // TODO: do something with the term in the response
+                } catch (RemoteException e) {
+                    System.err.println("Peer " + peerAddress + " is not working, removing from members");
+                    it.remove();
+                }
+
+                if(numberVotes >= members.size()/2 + 1){
+                    state = State.LEADER;
+                    System.out.println("Got elected leader for term " + currentTerm);
+                    break;
+                }
             }
         }
 
