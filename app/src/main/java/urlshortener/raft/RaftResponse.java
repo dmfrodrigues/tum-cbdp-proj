@@ -1,6 +1,8 @@
 package urlshortener.raft;
 
-public class RaftResponse<T> {
+import java.io.Serializable;
+
+public class RaftResponse<T> implements Serializable {
     private int term;
     private T t;
 

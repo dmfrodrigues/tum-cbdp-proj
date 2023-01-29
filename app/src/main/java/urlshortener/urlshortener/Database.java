@@ -42,6 +42,7 @@ public class Database {
         Statement st = conn.createStatement();
         st.execute("INSERT INTO short2url(id, url) VALUES ('" + id + "', '" + url + "')");
         st.close();
+        System.out.println("DB: applied " + id + " => " + url);
     }
 
     public String get(String id) throws SQLException {
