@@ -172,9 +172,7 @@ public class Raft implements RaftRemote {
             System.out.println("Gossip request: just learned about members [" + String.join(", ", members) + "]");
 
         Set<String> ret;
-        System.out.println("membersGossipRPC, locking members");
         synchronized(this.members){
-            System.out.println("membersGossipRPC, locked members");
             this.members.addAll(members);
             ret = new HashSet<>(this.members);
         }
