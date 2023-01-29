@@ -148,12 +148,13 @@ public class Raft implements RaftRemote {
                         // TODO: check if all members are online before gossipping
                         RaftRemote peer = Raft.connect(peerAddress);
                         Set<String> newMembers = peer.membersGossipRPC(membersCopy);
-                        newMembers.removeAll(membersCopy);
                         // System.out.println("Gossipped with " + peerAddress + " about network members");
-                        if(newMembers.size() > 0)
-                            System.out.println("Gossip response: just learned about members [" + String.join(", ", newMembers) + "]");
                         
                         synchronized(members){
+                            newMembers.removeAll(members);
+                            if(newMembers.size() > 0)
+                                System.out.println("Gossip response: just learned about members [" + String.join(", ", newMembers) + "]");
+                        
                             members.addAll(newMembers);
                         }
                         break;
