@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -270,9 +269,14 @@ public class Raft implements RaftRemote {
         }
         if(term > currentTerm){
             currentTerm = term;
-            synchronized(state){ state = State.FOLLOWER; }
+            synchronized(state){
+                state = State.FOLLOWER;
+                nextIndex = null;
+                matchIndex = null;
+            }
         }
 
+        // System.out.println("Updated heartbeat timestamp");
         heartbeatTimestampNanos.set(System.nanoTime());
 
         return new RaftResponse<Boolean>(currentTerm, true);
@@ -300,7 +304,11 @@ public class Raft implements RaftRemote {
         // Rules for all servers
         if(term > currentTerm){
             currentTerm = term;
-            synchronized(state){ state = State.FOLLOWER; }
+            synchronized(state){
+                state = State.FOLLOWER;
+                nextIndex = null;
+                matchIndex = null;
+            }
         }
         
         return new RaftResponse<Boolean>(currentTerm, false);
@@ -331,6 +339,7 @@ public class Raft implements RaftRemote {
     private long loopLeader() throws InterruptedException, NotBoundException {
         long tBeginNanos = System.nanoTime();
         synchronized(members){
+            // System.out.println("Sending heartbeat");
             Iterator<String> it = members.iterator();
             while(it.hasNext()){
                 String peerAddress = it.next();
@@ -447,6 +456,12 @@ public class Raft implements RaftRemote {
                 if(numberVotes >= members.size()/2 + 1){
                     state = State.LEADER;
                     System.out.println("Got elected leader for term " + currentTerm);
+                    nextIndex = new HashMap<>();
+                    matchIndex = new HashMap<>();
+                    for(String peerAddr: members){
+                        nextIndex.put(peerAddr, log.size());
+                        matchIndex.put(peerAddr, 0);
+                    }
                     break;
                 }
             }
