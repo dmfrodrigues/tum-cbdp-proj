@@ -7,17 +7,13 @@ import java.net.InetSocketAddress;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
-import java.sql.SQLException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import com.sun.net.httpserver.HttpServer;
 
 import urlshortener.raft.Raft;
-import urlshortener.raft.RaftRemote;
 import urlshortener.server.UrlShortenerHttpHandler;
 import urlshortener.urlshortener.Database;
 import urlshortener.urlshortener.UrlShortener;
@@ -35,7 +31,14 @@ public class App {
 
     public static void main(String args[]) {
         try {
-            createUrlShortener();
+            String myAddress = InetAddress.getLocalHost().getHostAddress();
+            String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
+
+            db = new Database("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+            db.seed();
+            raft = new Raft(myAddress);
+            node = new Node(raft);
+            urlShortener = new UrlShortenerHash(db, raft);
 
             register();
 
@@ -54,29 +57,12 @@ public class App {
         }
     }
 
-    private static void createUrlShortener() throws SQLException {
-        String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
-        db = new Database("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
-
-        // System.out.println("Database connected");
-
-        db.seed();
-
-        urlShortener = new UrlShortenerHash(db);
-
-        // System.out.println("URL shortener created");
-    }
-
     private static void register() throws AlreadyBoundException, IOException{
         register(Registry.REGISTRY_PORT);
     }
 
     private static void register(int port) throws AlreadyBoundException, IOException {
         // Instantiating the implementation class
-        String myAddress = InetAddress.getLocalHost().getHostAddress();
-        raft = new Raft(myAddress);
-        node = new Node(raft);
-
         raft.register();
 
         File file = new File("/tmp/registered");

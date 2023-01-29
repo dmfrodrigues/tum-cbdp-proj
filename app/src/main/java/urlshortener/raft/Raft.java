@@ -16,11 +16,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import urlshortener.LogEntryContentPut;
 import urlshortener.Utils;
 
 public class Raft implements RaftRemote {
@@ -55,7 +58,7 @@ public class Raft implements RaftRemote {
     // Time between consecutive members gossip
     static private long LEADER_JOIN_GOSSIP_MILLIS = 1000;
     Set<String> members = new HashSet<>();
-    ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+    ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(1);
 
     // Persistent state
     // TODO: all the persistent state variables must be stored in secondary
@@ -65,8 +68,8 @@ public class Raft implements RaftRemote {
     ArrayList<LogEntry> log = new ArrayList<>();
 
     // Volatile state
-    int commitIndex = 0;
-    int lastApplied = 0;
+    int commitIndex = -1;
+    int lastApplied = -1;
 
     // Volatile state on leader
     Map<String, Integer> nextIndex = null;
@@ -75,13 +78,20 @@ public class Raft implements RaftRemote {
     // Volatile state on followers
     AtomicLong heartbeatTimestampNanos = new AtomicLong(System.currentTimeMillis());
 
+    //
+    ExecutorService executor = Executors.newFixedThreadPool(4);
+
     public Raft(String myAddress){
         this.myAddress = myAddress;
         this.leaderAddress = myAddress;
         this.state = State.LEADER;
         members.add(myAddress);
-        nextIndex = new HashMap<>();
-        matchIndex = new HashMap<>();
+        nextIndex = new HashMap<>(){{
+            put(myAddress, 0);
+        }};
+        matchIndex = new HashMap<>(){{
+            put(myAddress, -1);
+        }};
 
         int seed = myAddress.hashCode();
         random = new Random(seed);
@@ -167,7 +177,7 @@ public class Raft implements RaftRemote {
             }
         };
 
-        executor.scheduleAtFixedRate(membersGossipRunnable, 0, LEADER_JOIN_GOSSIP_MILLIS, TimeUnit.MILLISECONDS);
+        scheduledExecutor.scheduleAtFixedRate(membersGossipRunnable, 0, LEADER_JOIN_GOSSIP_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -227,11 +237,8 @@ public class Raft implements RaftRemote {
     @Override
     public RaftResponse<Boolean> appendEntriesRPC(int term, int prevLogIndex, int prevLogTerm, List<LogEntry> entries, int leaderCommit) {
         // Initial work
-        // TODO: this heartbeat timestamp update is in the wrong place:
-        // heartbeat timestamp should only be updated if it is correct (i.e.,
-        // if this function returns true)
-        // System.out.println("Got appendEntriesRPC, updating heartbeat timestamp");
-        heartbeatTimestampNanos.set(System.nanoTime());
+        if(entries.size() > 0)
+            System.out.println("Got non-empty appendEntriesRPC");
 
         // 1.
         if(term < currentTerm)
@@ -257,7 +264,7 @@ public class Raft implements RaftRemote {
         }
 
         // Rules for all servers
-        while(commitIndex > lastApplied){
+        while(lastApplied < log.size() && commitIndex > lastApplied){
             ++lastApplied;
             log.get(lastApplied).apply();
         }
@@ -265,6 +272,8 @@ public class Raft implements RaftRemote {
             currentTerm = term;
             synchronized(state){ state = State.FOLLOWER; }
         }
+
+        heartbeatTimestampNanos.set(System.nanoTime());
 
         return new RaftResponse<Boolean>(currentTerm, true);
     }
@@ -328,26 +337,54 @@ public class Raft implements RaftRemote {
                 if(peerAddress.equals(myAddress)) continue;
                 try {
                     RaftRemote peer = Raft.connect(peerAddress);
-                    int matchIndexPeer = matchIndex.get(peerAddress);
-                    peer.appendEntriesRPC(
-                        currentTerm,
-                        matchIndexPeer,
-                        (matchIndexPeer != -1 ? log.get(matchIndexPeer).term : -1),
-                        new ArrayList<>(),
-                        commitIndex
-                    );
+                    heartbeatPeer(peer, peerAddress);
                     // System.out.println("    Sent heartbeat to " + peerAddress);
-                    // TODO: do things with the result of appendEntriesRPC
                 } catch (RemoteException e) {
                     System.err.println("Peer " + peerAddress + " is not working, removing from members");
                     it.remove();
                 }
+            }
+
+            while(true){
+                int numberPeersThatHaveIndex = 0;
+                it = members.iterator();
+                while(it.hasNext()){
+                    String peerAddress = it.next();
+                    if(matchIndex.get(peerAddress) > commitIndex) ++numberPeersThatHaveIndex;
+                }
+                if(numberPeersThatHaveIndex >= members.size()/2 + 1){
+                    ++commitIndex;
+                    log.get(commitIndex).apply();
+                } else break;
             }
         }
         long tEndNanos = System.nanoTime();
         long elapsedMillis = (tEndNanos-tBeginNanos)/1000000;
         long sleep = LEADER_HEARTBEAT_MILLIS-elapsedMillis;
         return sleep;
+    }
+
+    private void heartbeatPeer(RaftRemote peer, String peerAddress) throws RemoteException {
+        int nextIndexPeer = nextIndex.get(peerAddress);
+
+        while(true){
+            int N = log.size();
+            List<LogEntry> entries = new ArrayList<LogEntry>(log.subList(nextIndexPeer, N));
+            RaftResponse<Boolean> response = peer.appendEntriesRPC(
+                currentTerm,
+                nextIndexPeer-1,
+                (nextIndexPeer >= N ? -1 : log.get(nextIndexPeer).term),
+                entries,
+                commitIndex
+            );
+            if(response.get()){
+                nextIndex.put(peerAddress, N);
+                matchIndex.put(peerAddress, N-1);
+                break;
+            } else {
+                nextIndex.put(peerAddress, nextIndex.get(peerAddress)-1);
+            }
+        }
     }
 
     private long loopFollower() throws InterruptedException {
@@ -426,5 +463,19 @@ public class Raft implements RaftRemote {
     public void deregister() throws RemoteException, NotBoundException{
         Registry registry = LocateRegistry.getRegistry();
         registry.unbind("raft");
+    }
+
+    public void appendEntry(LogEntryContentPut logEntryContent) throws InterruptedException, NotBoundException {
+        if(!state.equals(State.LEADER))
+            return;
+
+        LogEntry logEntry = new LogEntry(currentTerm, logEntryContent);
+
+        log.add(logEntry);
+
+        matchIndex.put(myAddress, log.size());
+        nextIndex.put(myAddress, log.size()+1);
+
+        loopLeader();
     }
 }
