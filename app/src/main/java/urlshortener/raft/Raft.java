@@ -131,16 +131,11 @@ public class Raft implements RaftRemote {
         Runnable membersGossipRunnable = new Runnable() {
             public void run() {
                 synchronized(members){
-                    System.out.println("Gossipping; members list is [" + String.join(", ", members) + "]");
                     // while(members.size() > 1){
                     //     String peerAddress = null;
 
-                    //     int r = random.nextInt() % members.size();
-                    //     Iterator<String> it = members.iterator();
-                    //     while(r > 0){
-                    //         --r;
-                    //         peerAddress = it.next();
-                    //     }
+                    //     peerAddress = Utils.Rand.getRandomFromSet(random, members);
+
                     //     if(peerAddress == null || peerAddress.equals(myAddress)){
                     //         peerAddress = null;
                     //         continue;
