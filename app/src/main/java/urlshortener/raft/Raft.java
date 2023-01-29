@@ -21,6 +21,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import urlshortener.Utils;
+
 public class Raft implements RaftRemote {
     private static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
         Registry peerRegistry = LocateRegistry.getRegistry(peerAddress);
