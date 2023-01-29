@@ -130,33 +130,39 @@ public class Raft implements RaftRemote {
     public void startMembersGossip(){
         Runnable membersGossipRunnable = new Runnable() {
             public void run() {
-                synchronized(members){
-                    while(members.size() > 1){
-                        String peerAddress = null;
+                while(true){
+                    String peerAddress = null;
 
+                    Set<String> membersCopy;
+                    synchronized(members){
+                        if(members.size() <= 1) break;
                         peerAddress = Utils.Rand.getRandomFromSet(random, members);
+                        membersCopy = new HashSet<>(members);
+                    }
 
-                        if(peerAddress == null || peerAddress.equals(myAddress)){
-                            peerAddress = null;
-                            continue;
-                        }
-                        try {
-                            // TODO: check if all members are online before gossipping
-                            RaftRemote peer = Raft.connect(peerAddress);
-                            Set<String> newMembers = peer.membersGossipRPC(members);
-                            newMembers.removeAll(members);
-                            // System.out.println("Gossipped with " + peerAddress + " about network members");
-                            if(newMembers.size() > 0)
-                                System.out.println("Gossip response: just learned about members [" + String.join(", ", newMembers) + "]");
+                    if(peerAddress == null || peerAddress.equals(myAddress)){
+                        peerAddress = null;
+                        continue;
+                    }
+                    try {
+                        // TODO: check if all members are online before gossipping
+                        RaftRemote peer = Raft.connect(peerAddress);
+                        Set<String> newMembers = peer.membersGossipRPC(membersCopy);
+                        newMembers.removeAll(membersCopy);
+                        // System.out.println("Gossipped with " + peerAddress + " about network members");
+                        if(newMembers.size() > 0)
+                            System.out.println("Gossip response: just learned about members [" + String.join(", ", newMembers) + "]");
+                        
+                        synchronized(members){
                             members.addAll(newMembers);
-                            break;
-                        } catch (RemoteException e) {
-                            System.err.println("Peer " + peerAddress + " is not working, removing from members");
-                            members.remove(peerAddress);
-                        } catch (NotBoundException e) {
-                            e.printStackTrace();
-                            break;
                         }
+                        break;
+                    } catch (RemoteException e) {
+                        System.err.println("Peer " + peerAddress + " is not working, removing from members");
+                        members.remove(peerAddress);
+                    } catch (NotBoundException e) {
+                        e.printStackTrace();
+                        break;
                     }
                 }
             }
