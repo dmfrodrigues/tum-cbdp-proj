@@ -261,7 +261,7 @@ public class Raft implements RaftRemote {
         }
         if(term > currentTerm){
             currentTerm = term;
-            state = State.FOLLOWER;
+            synchronized(state){ state = State.FOLLOWER; }
         }
 
         return new RaftResponse<Boolean>(currentTerm, true);
