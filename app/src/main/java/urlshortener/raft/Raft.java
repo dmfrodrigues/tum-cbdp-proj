@@ -291,26 +291,28 @@ public class Raft implements RaftRemote {
     }
 
     public void run() throws InterruptedException, NotBoundException, ServerNotActiveException {
+        long sleep = 0;
         while(true){
             synchronized(state){
                 switch(state){
                     case LEADER:
-                        loopLeader();
+                        sleep = loopLeader();
                         break;
                     case FOLLOWER:
-                        loopFollower();
+                        sleep = loopFollower();
                         break;
                     case CANDIDATE:
-                        loopCandidate();
+                        sleep = loopCandidate();
                         break;
                     default:
                         break;
                 }
             }
+            Thread.sleep(sleep);
         }
     }
 
-    private void loopLeader() throws InterruptedException, NotBoundException {
+    private long loopLeader() throws InterruptedException, NotBoundException {
         long tBeginNanos = System.nanoTime();
         synchronized(members){
             Iterator<String> it = members.iterator();
@@ -336,10 +338,11 @@ public class Raft implements RaftRemote {
         }
         long tEndNanos = System.nanoTime();
         long elapsedMillis = (tEndNanos-tBeginNanos)/1000000;
-        Thread.sleep(LEADER_HEARTBEAT_MILLIS-elapsedMillis);
+        long sleep = LEADER_HEARTBEAT_MILLIS-elapsedMillis;
+        return sleep;
     }
 
-    private void loopFollower() throws InterruptedException {
+    private long loopFollower() throws InterruptedException {
         long nowMillis = System.nanoTime()/1000000;
         long heartbeatTimestampMillis = heartbeatTimestampNanos.get()/1000000;
         long elapsedMillis = nowMillis - heartbeatTimestampMillis;
@@ -348,17 +351,17 @@ public class Raft implements RaftRemote {
             System.out.println("Suspect leader is dead, I am now a candidate");
             members.remove(leaderAddress);
             state = State.CANDIDATE;
-            return;
+            return 0;
         }
 
         long sleepUntilMillis = heartbeatTimestampMillis + FOLLOWER_TIMEOUT_MILLIS;
         nowMillis = System.nanoTime()/1000000;
         long delta = Math.max(sleepUntilMillis - nowMillis, FOLLOWER_SLEEP_MILLIS);
-        Thread.sleep(delta);
+        return delta;
     }
 
     // Start election
-    private void loopCandidate() throws NotBoundException, ServerNotActiveException {
+    private long loopCandidate() throws NotBoundException, ServerNotActiveException {
         ++currentTerm;
         votedFor = myAddress;
 
@@ -402,6 +405,7 @@ public class Raft implements RaftRemote {
             }
         }
 
+        return 0;
     }
 
     public void register() throws RemoteException, AlreadyBoundException {
