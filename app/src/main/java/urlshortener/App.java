@@ -58,7 +58,7 @@ public class App {
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
         db = new Database("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
 
-        System.out.println("Database connected");
+        // System.out.println("Database connected");
 
         db.seed();
 

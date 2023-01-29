@@ -108,8 +108,6 @@ public class Raft implements RaftRemote {
         RaftRemote peer = connect(peerAddress);
         leaderAddress = peer.getLeaderAddress();
 
-        System.out.println("Joining leader at " + leaderAddress);
-
         Registry leaderRegistry = LocateRegistry.getRegistry(leaderAddress);
         RaftRemote leader = (RaftRemote)leaderRegistry.lookup("raft");
             
@@ -119,7 +117,7 @@ public class Raft implements RaftRemote {
             matchIndex = null;
 
             members = leader.joinRPC();
-            System.out.println("Joined leader, got list of members: [" + String.join(", ", members) + "]");
+            System.out.println("Joined leader at " + leaderAddress + ", got list of members: [" + String.join(", ", members) + "]");
 
             startMembersGossip();
 
@@ -223,7 +221,7 @@ public class Raft implements RaftRemote {
             throw new InvalidStateError("Can only call addMemberRPC() if the callee is a follower");
         }
         synchronized(members){ members.add(newPeerAddress); }
-        System.out.println("Unlocked members (addMemberRPC)");
+        System.out.println("Added member " + newPeerAddress);
     }
 
     @Override
