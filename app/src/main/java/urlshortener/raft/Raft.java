@@ -142,18 +142,21 @@ public class Raft implements RaftRemote {
                     //         continue;
                     //     }
                     //     try {
+                    //         // TODO: check if all members are online before gossipping
                     //         RaftRemote peer = Raft.connect(peerAddress);
                     //         Set<String> newMembers = peer.membersGossipRPC(members);
+                    //         newMembers.removeAll(members);
+                    //         // System.out.println("Gossipped with " + peerAddress + " about network members");
+                    //         if(newMembers.size() > 0)
+                    //             System.out.println("Gossip response: just learned about members [" + String.join(", ", newMembers) + "]");
                     //         members.addAll(newMembers);
-                    //         System.out.println("Gossipped with " + peerAddress + " about network members");
-                    //         System.out.println("Gossip response: just learned about members [" + String.join(", ") + "]");
-                    //         return;
+                    //         break;
                     //     } catch (RemoteException e) {
                     //         System.err.println("Peer " + peerAddress + " is not working, removing from members");
-                    //         it.remove();
+                    //         members.remove(peerAddress);
                     //     } catch (NotBoundException e) {
                     //         e.printStackTrace();
-                    //         return;
+                    //         break;
                     //     }
                     // }
                 }
