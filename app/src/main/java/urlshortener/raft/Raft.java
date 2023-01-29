@@ -229,6 +229,10 @@ public class Raft implements RaftRemote {
     @Override
     public RaftResponse<Boolean> appendEntriesRPC(int term, int prevLogIndex, int prevLogTerm, List<LogEntry> entries, int leaderCommit) {
         // Initial work
+        // TODO: this heartbeat timestamp update is in the wrong place:
+        // heartbeat timestamp should only be updated if it is correct (i.e.,
+        // if this function returns true)
+        // System.out.println("Got appendEntriesRPC, updating heartbeat timestamp");
         heartbeatTimestampNanos.set(System.nanoTime());
 
         // 1.
@@ -333,6 +337,7 @@ public class Raft implements RaftRemote {
                         new ArrayList<>(),
                         commitIndex
                     );
+                    // System.out.println("    Sent heartbeat to " + peerAddress);
                     // TODO: do things with the result of appendEntriesRPC
                 } catch (RemoteException e) {
                     System.err.println("Peer " + peerAddress + " is not working, removing from members");
