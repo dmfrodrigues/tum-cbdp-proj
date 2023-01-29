@@ -353,7 +353,7 @@ public class Raft implements RaftRemote {
         // System.out.println("Elapsed: " + elapsedMillis);
         if(elapsedMillis > FOLLOWER_TIMEOUT_MILLIS){
             System.out.println("Suspect leader is dead, I am now a candidate");
-            members.remove(leaderAddress);
+            synchronized(members){ members.remove(leaderAddress); }
             state = State.CANDIDATE;
             return 0;
         }
