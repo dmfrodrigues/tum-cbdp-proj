@@ -2,12 +2,15 @@ package urlshortener.urlshortener;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class DatabasePostgres implements Database {
-    Connection conn;
+public class DatabasePostgres extends Database {
+    private Connection conn;
+    private PreparedStatement putStmt;
+    private PreparedStatement getStmt;
 
     private Connection connect(String url, String user, String password) throws SQLException {
         return DriverManager.getConnection(url, user, password);
@@ -15,12 +18,22 @@ public class DatabasePostgres implements Database {
 
     public DatabasePostgres(String url, String user, String password) throws SQLException {
         conn = connect(url, user, password);
+        putStmt = conn.prepareStatement("""
+            INSERT INTO map(key, value)
+            VALUES (?, ?)
+            ON CONFLICT (key) DO
+                UPDATE SET value=EXCLUDED.value
+        """);
+        getStmt = conn.prepareStatement("""
+            SELECT value FROM map
+            WHERE key=?
+        """);
     }
 
     public boolean seed() {
         try {
             String seedString = """
-                DROP SCHEMA IF EXISTS urlshortener;
+                DROP SCHEMA IF EXISTS urlshortener CASCADE;
 
                 CREATE SCHEMA urlshortener;
                 SET search_path TO urlshortener;
@@ -45,11 +58,11 @@ public class DatabasePostgres implements Database {
 
     public boolean put(String key, String value) {
         try {
-            Statement st = conn.createStatement();
-            st.execute("INSERT INTO map(key, value) VALUES ('" + key + "', '" + value + "')");
-            st.close();
+            putStmt.setString(1, key);
+            putStmt.setString(2, value);
+            int n = putStmt.executeUpdate();
             // System.out.println("DB: applied " + key + " => " + value);
-            return true;
+            return (n == 1);
         } catch(SQLException e){
             e.printStackTrace();
             System.out.println("DB: failed to apply " + key + " => " + value);
@@ -59,11 +72,10 @@ public class DatabasePostgres implements Database {
 
     public String get(String key) {
         try {
-            Statement st = conn.createStatement();
-            ResultSet rs = st.executeQuery("SELECT value FROM map WHERE key='" + key + "'");
+            getStmt.setString(1, key);
+            ResultSet rs = getStmt.executeQuery();
             if(!rs.next()) return null;
             String url = rs.getString("value");
-            st.close();
             return url;
         } catch(SQLException e){
             e.printStackTrace();
