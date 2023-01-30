@@ -20,6 +20,8 @@ import urlshortener.raft.Raft;
 import urlshortener.raft.RaftRemote;
 import urlshortener.server.UrlShortenerHttpHandler;
 import urlshortener.urlshortener.Database;
+import urlshortener.urlshortener.DatabaseMongo;
+import urlshortener.urlshortener.DatabasePostgres;
 import urlshortener.urlshortener.UrlShortener;
 import urlshortener.urlshortener.UrlShortenerHash;
 
@@ -51,9 +53,10 @@ public class App {
         }
     }
 
-    private static void createUrlShortener() throws SQLException {
-        String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
-        db = new Database("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+    private static void createUrlShortener() throws Exception {
+        // String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
+        // db = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        db = new DatabaseMongo();
 
         System.out.println("Database connected");
 

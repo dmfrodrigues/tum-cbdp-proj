@@ -6,7 +6,9 @@ RUN apk update
 RUN apk --no-cache add \
     curl \
     java-postgresql-jdbc \
-    postgresql
+    postgresql \
+    mongodb \
+    mongodb-tools
 
 # Set up gradle
 
@@ -21,6 +23,14 @@ RUN chown postgres:postgres /run/postgresql
 RUN mkdir -p /var/lib/postgresql/data
 RUN chown postgres:postgres /var/lib/postgresql/data
 RUN chmod 0700 /var/lib/postgresql/data
+
+# Set up MongoDB database
+RUN mkdir -p /data/db/
+RUN chown `root` /data/db
+
+# Enable and start MongoDB service on Alpine
+RUN rc-update add mongodb default
+RUN rc-service mongodb start
 
 USER postgres
 ## Initialize DB
@@ -41,7 +51,7 @@ COPY . .
 RUN mv init_db.sh /init_db.sh
 RUN chmod 777 /init_db.sh
 
-RUN chmod +x *.sh
+RUN chmod +x *.sh gradlew
 
 RUN ./gradlew assemble
 

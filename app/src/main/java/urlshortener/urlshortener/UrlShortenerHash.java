@@ -1,6 +1,5 @@
 package urlshortener.urlshortener;
 
-import java.sql.SQLException;
 import java.util.Base64;
 
 public class UrlShortenerHash implements UrlShortener {
@@ -17,7 +16,7 @@ public class UrlShortenerHash implements UrlShortener {
 
         try {
             db.put(id, url);
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -28,7 +27,7 @@ public class UrlShortenerHash implements UrlShortener {
     public String enlongate(String id) {
         try {
             return db.get(id);
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
