@@ -32,7 +32,7 @@ class TestSingleNode(unittest.TestCase):
         self.assertEqual(url, urlGet)
     
     def testMassiveSeparate(self):
-        N = 100
+        N = 1000
         t = time.time()
         
         urls = []
@@ -47,7 +47,9 @@ class TestSingleNode(unittest.TestCase):
             self.assertEqual(r.status_code, 200)
             shortened.append(r.text)
 
-        print("PUT: ", time.time()-t)
+        elapsed = time.time()-t
+        print(f"PUT: {elapsed*1e6}micros ({elapsed*1e6/N}micros per query)")
+
         t = time.time()
 
         for i in range(N):
@@ -58,7 +60,8 @@ class TestSingleNode(unittest.TestCase):
 
             self.assertEqual(urls[i], urlGet)
 
-        print("GET: ", time.time()-t)
+        elapsed = time.time()-t
+        print(f"GET: {elapsed*1e6}micros ({elapsed*1e6/N}micros per query)")
 
 if __name__ == '__main__':
     unittest.main()
