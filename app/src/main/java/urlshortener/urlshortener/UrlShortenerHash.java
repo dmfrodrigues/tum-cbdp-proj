@@ -22,7 +22,8 @@ public class UrlShortenerHash implements UrlShortener {
         String id = new String(Base64.getEncoder().encode(hashString.getBytes()));
 
         try {
-            raft.appendEntry(new LogEntryContentPut(id, url));
+            if(!raft.appendEntry(new LogEntryContentPut(id, url)))
+                return null;
         } catch (InterruptedException | NotBoundException e) {
             e.printStackTrace();
             return null;

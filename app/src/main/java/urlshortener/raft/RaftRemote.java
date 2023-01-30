@@ -79,4 +79,6 @@ public interface RaftRemote extends Remote {
      * @throws ServerNotActiveException
      */
     public RaftResponse<Boolean> requestVoteRPC(int term, int lastLogIndex, int lastLogTerm) throws RemoteException, ServerNotActiveException;
+
+    public boolean appendEntry(LogEntryContent logEntryContent) throws InterruptedException, NotBoundException;
 }

@@ -480,9 +480,15 @@ public class Raft implements RaftRemote {
         registry.unbind("raft");
     }
 
-    public void appendEntry(LogEntryContentPut logEntryContent) throws InterruptedException, NotBoundException {
-        if(!state.equals(State.LEADER))
-            return;
+    public boolean appendEntry(LogEntryContent logEntryContent) throws InterruptedException, NotBoundException {
+        if(!state.equals(State.LEADER)){
+            try {
+                RaftRemote leader = Raft.connect(leaderAddress);
+                return leader.appendEntry(logEntryContent);
+            } catch (RemoteException e) {
+                return false;
+            }
+        }
 
         LogEntry logEntry = new LogEntry(currentTerm, logEntryContent);
 
@@ -492,5 +498,7 @@ public class Raft implements RaftRemote {
         nextIndex.put(myAddress, log.size()+1);
 
         loopLeader();
+
+        return true;
     }
 }
