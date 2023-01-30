@@ -66,7 +66,7 @@ public class Raft implements RaftRemote {
     // memory
     Stored<Integer> currentTerm;
     Stored<String> votedFor;
-    ArrayList<LogEntry> log = new ArrayList<>();
+    PersistentLog log;
 
     // Volatile state
     int commitIndex = -1;
@@ -82,13 +82,14 @@ public class Raft implements RaftRemote {
     //
     ExecutorService executor = Executors.newFixedThreadPool(4);
 
-    public Raft(String myAddress, Database db) throws IOException {
+    public Raft(String myAddress, PersistentMap map, PersistentLog log) throws IOException {
         this.myAddress = myAddress;
         this.leaderAddress = myAddress;
         this.state = State.LEADER;
 
-        currentTerm = db.loadStoredVariable("currentTerm", 0);
-        votedFor = db.loadStoredVariable("votedFor", null);
+        currentTerm = map.loadStoredVariable("currentTerm", 0);
+        votedFor = map.loadStoredVariable("votedFor", null);
+        this.log = log;
 
         members.add(myAddress);
         nextIndex = new HashMap<>(){{
@@ -257,7 +258,7 @@ public class Raft implements RaftRemote {
             int k = i - prevLogIndex;
             if(k >= entries.size()) break;
             if(log.get(i).term != entries.get(k).term){
-                log.subList(i, log.size()).clear();
+                log.deleteAfter(i);
                 break;
             }
         }
@@ -385,7 +386,7 @@ public class Raft implements RaftRemote {
 
         while(true){
             int N = log.size();
-            List<LogEntry> entries = new ArrayList<LogEntry>(log.subList(nextIndexPeer, N));
+            List<LogEntry> entries = new ArrayList<>(log.getAfter(nextIndexPeer));
             RaftResponse<Boolean> response = peer.appendEntriesRPC(
                 currentTerm.get(),
                 nextIndexPeer-1,
