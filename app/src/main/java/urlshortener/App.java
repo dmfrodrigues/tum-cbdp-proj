@@ -29,9 +29,33 @@ public class App {
     static ThreadPoolExecutor serverThreadPoolExecutor = (ThreadPoolExecutor)Executors.newFixedThreadPool(2);
     static HttpServer server;
 
+    public static String getMyAddress() throws UnknownHostException {
+        try {
+            Enumeration<NetworkInterface> n = NetworkInterface.getNetworkInterfaces();
+            while(n.hasMoreElements()){
+                NetworkInterface e = n.nextElement();
+                // System.out.println("Interface: " + e.getName());
+                if(e.getName() == "lo") continue;
+                Enumeration<InetAddress> a = e.getInetAddresses();
+                while(a.hasMoreElements()){
+                    InetAddress addr = a.nextElement();
+                    // System.out.println("  " + addr.getHostAddress() + " " + (addr instanceof Inet4Address));
+                    if(addr instanceof Inet4Address){
+                        return addr.getHostAddress();
+                    }
+                }
+            }
+        } catch(Exception e){
+            e.printStackTrace();
+        }
+
+        System.err.println("Could not find my address in decent way, using the sometimes-incorrect way");
+        return InetAddress.getLocalHost().getHostAddress(); // often returns "127.0.0.1"
+    }
+
     public static void main(String args[]) {
         try {
-            String myAddress = InetAddress.getLocalHost().getHostAddress();
+            String myAddress = getMyAddress();
             String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
 
             db = new Database("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
