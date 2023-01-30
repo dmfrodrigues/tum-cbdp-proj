@@ -19,22 +19,19 @@ public class UrlShortenerHttpHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange httpExchange) throws IOException {
-        InputStream is = httpExchange.getRequestBody();
         OutputStream os = httpExchange.getResponseBody();
-        StringBuilder stringBuilder = new StringBuilder();
 
         switch(httpExchange.getRequestMethod()){
             case "PUT": {
+                InputStream is = httpExchange.getRequestBody();
                 Scanner s = new Scanner(is).useDelimiter("\\A");
                 String value = (s.hasNext() ? s.next() : "");
                 s.close();
 
                 String key = urlShortener.shorten(value);
-                stringBuilder.append(key);
 
-                String response = stringBuilder.toString();
-                httpExchange.sendResponseHeaders(200, response.length());
-                os.write(response.getBytes());
+                httpExchange.sendResponseHeaders(200, key.length());
+                os.write(key.getBytes());
                 os.flush();
                 os.close();
 
@@ -48,23 +45,21 @@ public class UrlShortenerHttpHandler implements HttpHandler {
 
                 if(url == null){
                     httpExchange.sendResponseHeaders(404, 0);
-                    os.flush();
-                    os.close();
-                    return;
+                    break;
                 }
 
                 httpExchange.getResponseHeaders().set("Location", url);
 
                 httpExchange.sendResponseHeaders(301, 0);
 
-                os.flush();
-                os.close();
-
                 break;
             }
             default:
                 httpExchange.sendResponseHeaders(405, 0);
-                return;
+                break;
         }
+
+        os.flush();
+        os.close();
     }
 }
