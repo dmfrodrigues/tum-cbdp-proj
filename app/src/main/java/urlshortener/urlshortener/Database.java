@@ -25,7 +25,7 @@ public abstract class Database {
             
             String s = db.get(varName);
             if(s == null){
-                put(defaultValue);
+                set(defaultValue);
                 return;
             }
 
@@ -38,7 +38,7 @@ public abstract class Database {
                 throw new ClassCastException(e.getMessage());
             }
         }
-        public void put(T t) throws IOException {
+        public void set(T t) throws IOException {
             this.t = t;
             
             ByteArrayOutputStream baos = new ByteArrayOutputStream();

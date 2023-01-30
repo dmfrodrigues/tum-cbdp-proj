@@ -65,7 +65,7 @@ public class App {
 
             db = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
             db.seed();
-            raft = new Raft(myAddress);
+            raft = new Raft(myAddress, db);
             node = new Node(raft);
             urlShortener = new UrlShortenerHash(db, raft);
 

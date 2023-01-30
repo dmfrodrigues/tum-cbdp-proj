@@ -23,12 +23,16 @@ public class DatabaseTest {
         assertEquals(i.get(), Integer.valueOf(2));
 
         // Modify variable
-        i.put(3);
+        i.set(3);
         assertEquals(i.get(), Integer.valueOf(3));
 
         // Two variables at same time
         Stored<Integer> i2 = db.loadStoredVariable("i", 4);
         assertEquals(i .get(), Integer.valueOf(3));
         assertEquals(i2.get(), Integer.valueOf(3));
+
+        // Modify to null
+        i.set(null);
+        assertEquals(i.get(), null);
     }
 }
