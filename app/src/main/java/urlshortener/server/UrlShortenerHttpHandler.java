@@ -21,45 +21,52 @@ public class UrlShortenerHttpHandler implements HttpHandler {
     public void handle(HttpExchange httpExchange) throws IOException {
         OutputStream os = httpExchange.getResponseBody();
 
-        switch(httpExchange.getRequestMethod()){
-            case "PUT": {
-                InputStream is = httpExchange.getRequestBody();
-                Scanner s = new Scanner(is).useDelimiter("\\A");
-                String value = (s.hasNext() ? s.next() : "");
-                s.close();
+        try {
+            switch(httpExchange.getRequestMethod()){
+                case "PUT": {
+                    InputStream is = httpExchange.getRequestBody();
+                    Scanner s = new Scanner(is).useDelimiter("\\A");
+                    String value = (s.hasNext() ? s.next() : "");
+                    s.close();
 
-                String key = urlShortener.shorten(value);
+                    String key = urlShortener.shorten(value);
 
-                httpExchange.sendResponseHeaders(200, key.length());
-                os.write(key.getBytes());
-                os.flush();
-                os.close();
+                    httpExchange.sendResponseHeaders(200, key.length());
+                    os.write(key.getBytes());
+                    os.flush();
+                    os.close();
 
-                break;
-            }
-            case "GET": {
-                String[] uriParts = httpExchange.getRequestURI().toString().split("/");
-                String key = uriParts[uriParts.length-1];
-
-                String url = urlShortener.enlongate(key);
-
-                if(url == null){
-                    httpExchange.sendResponseHeaders(404, 0);
                     break;
                 }
+                case "GET": {
+                    String[] uriParts = httpExchange.getRequestURI().toString().split("/");
+                    String key = uriParts[uriParts.length-1];
 
-                httpExchange.getResponseHeaders().set("Location", url);
+                    String url = urlShortener.enlongate(key);
 
-                httpExchange.sendResponseHeaders(301, 0);
+                    if(url == null){
+                        httpExchange.sendResponseHeaders(404, 0);
+                        break;
+                    }
 
-                break;
+                    httpExchange.getResponseHeaders().set("Location", url);
+
+                    httpExchange.sendResponseHeaders(301, 0);
+
+                    break;
+                }
+                default:
+                    httpExchange.sendResponseHeaders(405, 0);
+                    break;
             }
-            default:
-                httpExchange.sendResponseHeaders(405, 0);
-                break;
-        }
 
-        os.flush();
-        os.close();
+            os.flush();
+            os.close();
+        } catch(Exception e){
+            e.printStackTrace();
+            httpExchange.sendResponseHeaders(500, 0);
+            os.flush();
+            os.close();
+        }
     }
 }
