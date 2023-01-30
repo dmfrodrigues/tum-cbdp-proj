@@ -11,10 +11,3 @@ checkName:
 #   stage: deploy
 #   script:
 #     - bash -c '[ -f report.pdf ]'
-
-images:
-  stage: build
-  script:
-    - docker build --target peer .
-    - docker build --target leader .
-
