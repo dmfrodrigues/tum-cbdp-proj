@@ -19,12 +19,12 @@ import com.sun.net.httpserver.HttpServer;
 
 import urlshortener.raft.Raft;
 import urlshortener.server.UrlShortenerHttpHandler;
-import urlshortener.urlshortener.Database;
+import urlshortener.urlshortener.DatabasePostgres;
 import urlshortener.urlshortener.UrlShortener;
 import urlshortener.urlshortener.UrlShortenerHash;
 
 public class App {
-    static Database db;
+    static DatabasePostgres db;
     static UrlShortener urlShortener;
 
     static Raft raft;
@@ -62,7 +62,7 @@ public class App {
             String myAddress = getMyAddress();
             String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
 
-            db = new Database("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+            db = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
             db.seed();
             raft = new Raft(myAddress);
             node = new Node(raft);

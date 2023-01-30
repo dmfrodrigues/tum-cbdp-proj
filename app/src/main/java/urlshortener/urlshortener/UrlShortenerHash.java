@@ -8,10 +8,10 @@ import urlshortener.LogEntryContentPut;
 import urlshortener.raft.Raft;
 
 public class UrlShortenerHash implements UrlShortener {
-    Database db;
+    DatabasePostgres db;
     Raft raft;
 
-    public UrlShortenerHash(Database db, Raft raft){
+    public UrlShortenerHash(DatabasePostgres db, Raft raft){
         this.db = db;
         this.raft = raft;
     }
