@@ -4,36 +4,27 @@ services:
 
   leader:
     container_name: url-shortener_leader
-    build: .
-    healthcheck:
-      test: "[ -f /tmp/registered ]"
-      start_period: 10s
-      interval: 1s
-      timeout: 1s
-      retries: 50
+    build:
+      context: .
+      target: leader
     ports:
       - 8001:8001
 
   peer:
-    build: .
+    build:
+      context: .
+      target: peer
     depends_on:
       leader:
         condition: service_healthy
-    healthcheck:
-      test: "[ -f /tmp/registered ]"
-      start_period: 10s
-      interval: 1s
-      timeout: 1s
-      retries: 50
-    command: ["./run.join.sh", "leader"]
     ports:
       - 8001
 
-  # db_admin:
-  #   build: ./db_admin
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@mail.com
-  #     PGADMIN_DEFAULT_PASSWORD: 123
-  #     PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
-  #   ports:
-  #     - "4321:80"
+  db_admin:
+    build: ./db_admin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mail.com
+      PGADMIN_DEFAULT_PASSWORD: 123
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+    ports:
+      - "4321:80"

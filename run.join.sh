@@ -1,6 +1,5 @@
 #!/bin/sh
 set -e
-echo $CBDP_LEADER
 
 su -c "sh /init_db.sh" -m postgres
 

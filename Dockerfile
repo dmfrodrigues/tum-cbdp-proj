@@ -48,6 +48,8 @@ RUN ./gradlew assemble
 ENV CBDP_LEADER leader
 CMD exec ./run.join.sh "$CBDP_LEADER"
 
+HEALTHCHECK --interval=1s --timeout=1s --start-period=5s --retries=50 CMD cat /tmp/registered
+
 FROM peer as leader
 
 CMD ["./run.sh"]
