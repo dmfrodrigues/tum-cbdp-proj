@@ -362,6 +362,7 @@ public class Raft implements RaftRemote {
                 }
             }
 
+            int oldCommitIndex = commitIndex;
             while(true){
                 int numberPeersThatHaveIndex = 0;
                 it = members.iterator();
@@ -373,6 +374,15 @@ public class Raft implements RaftRemote {
                     ++commitIndex;
                     log.get(commitIndex).apply();
                 } else break;
+            }
+            /**
+             * This allows that, if there are commits, an extraordinary
+             * heartbeat is sent to commit it. This does not make Raft
+             * linearizable. It merely expedites the process of committing log
+             * entries in the peers.
+             */
+            if(oldCommitIndex != commitIndex){
+                loopLeader();
             }
         }
         long tEndNanos = System.nanoTime();

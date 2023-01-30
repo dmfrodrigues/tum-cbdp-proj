@@ -19,6 +19,9 @@ The external interface of each node is an HTTP interface with two endpoints:
 
 All requests can be made to all nodes; `GET` requests are served locally by each node, but `PUT` requests are redirected to the leader in a transparent way.
 
+A few notable improvements we implemented are:
+- **When commitIndex is modified, an extraordinary heartbeat is sent to all peers**, so that the may commit more log entries. This does not make Raft linearizable, because Raft does not wait for a log entry to be committed in all peers to return to a `PUT` request (although it waits until a writing quorum of half the peers plus one has gotten the new log entry before replying to the `PUT`). It does however help expedite commits in non-leader peers, since the leader does not wait until the next scheduled periodic heartbeat to inform peers of commitIndex; the leader informs them immediately.
+
 ## How does your cluster handle leader crashes?
 
 The heartbeat period is $500\text{ms}$. Each peer picks a random election timeout $T$ between $T_{min} = 1000\text{ms}$ and $T_{max} = 2000\text{ms}$. When a peer detects a leader crash by noticing that the last appendEntries (or requestVote) were more than $T$ time ago, it becomes a candidate and starts an election. The election process follows the Raft protocol.
