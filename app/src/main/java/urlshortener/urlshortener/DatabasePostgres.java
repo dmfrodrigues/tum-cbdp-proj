@@ -48,7 +48,7 @@ public class DatabasePostgres implements Database {
             Statement st = conn.createStatement();
             st.execute("INSERT INTO map(key, value) VALUES ('" + key + "', '" + value + "')");
             st.close();
-            System.out.println("DB: applied " + key + " => " + value);
+            // System.out.println("DB: applied " + key + " => " + value);
             return true;
         } catch(SQLException e){
             e.printStackTrace();
