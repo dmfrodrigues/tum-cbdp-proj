@@ -26,7 +26,7 @@ public class DatabasePostgresTest {
         List<String> keyList = new ArrayList<>();
         for(int i = 0; i < N; ++i){
             String value = TestUtils.getRandomURL(random);
-            String key = UrlShortenerHash.shortenURL(value);
+            String key = UrlShortenerHash.staticShortenURL(value);
             valueList.add(value);
             keyList.add(key);
         }

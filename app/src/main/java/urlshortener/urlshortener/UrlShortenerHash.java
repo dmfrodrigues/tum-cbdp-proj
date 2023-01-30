@@ -9,9 +9,13 @@ public class UrlShortenerHash extends UrlShortener {
         super(db, raft);
     }
 
-    public String shortenURL(String url){
+    static public String staticShortenURL(String url){
         Integer hash = url.hashCode();
         String hashString = hash.toString();
         return new String(Base64.getEncoder().encode(hashString.getBytes()));
+    }
+
+    public String shortenURL(String url){
+        return staticShortenURL(url);
     }
 }
