@@ -31,3 +31,7 @@ application {
     // Define the main class for the application.
     mainClass = 'urlshortener.App'
 }
+
+test {
+    testLogging.showStandardStreams = true
+}
