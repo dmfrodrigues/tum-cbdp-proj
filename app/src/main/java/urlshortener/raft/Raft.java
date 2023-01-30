@@ -24,8 +24,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import urlshortener.Utils;
+import urlshortener.raft.PersistentMap.Stored;
 import urlshortener.urlshortener.Database;
-import urlshortener.urlshortener.Database.Stored;
 
 public class Raft implements RaftRemote {
     private static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {

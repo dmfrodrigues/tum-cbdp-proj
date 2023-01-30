@@ -7,9 +7,9 @@ import java.sql.SQLException;
 
 import org.junit.Test;
 
+import urlshortener.raft.PersistentMap.Stored;
 import urlshortener.urlshortener.Database;
 import urlshortener.urlshortener.DatabasePostgres;
-import urlshortener.urlshortener.Database.Stored;
 
 public class DatabaseTest {
     @Test
