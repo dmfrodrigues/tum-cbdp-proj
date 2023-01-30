@@ -22,7 +22,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import urlshortener.LogEntryContentPut;
 import urlshortener.Utils;
 
 public class Raft implements RaftRemote {
@@ -114,11 +113,13 @@ public class Raft implements RaftRemote {
      * @throws ServerNotActiveException
      */
     public void join(String peerAddress) throws RemoteException, NotBoundException, ServerNotActiveException {
+        System.out.println("Joining node at " + peerAddress);
+
         RaftRemote peer = connect(peerAddress);
         leaderAddress = peer.getLeaderAddress();
 
-        Registry leaderRegistry = LocateRegistry.getRegistry(leaderAddress);
-        RaftRemote leader = (RaftRemote)leaderRegistry.lookup("raft");
+        System.out.println("Joining leader at " + leaderAddress);
+        RaftRemote leader = connect(leaderAddress);
             
         synchronized(state){
             state = State.FOLLOWER;
