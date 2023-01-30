@@ -45,6 +45,9 @@ RUN chmod +x *.sh gradlew
 
 RUN ./gradlew assemble
 
+EXPOSE 80
+EXPOSE 1099
+
 ENV CBDP_LEADER leader
 CMD exec ./run.join.sh "$CBDP_LEADER"
 
