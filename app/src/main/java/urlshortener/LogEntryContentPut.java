@@ -1,7 +1,5 @@
 package urlshortener;
 
-import java.sql.SQLException;
-
 import urlshortener.raft.LogEntryContent;
 
 public class LogEntryContentPut implements LogEntryContent {
@@ -15,10 +13,6 @@ public class LogEntryContentPut implements LogEntryContent {
 
     @Override
     public void apply() {
-        try {
-            App.db.put(key, value);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        App.db.put(key, value);
     }
 }

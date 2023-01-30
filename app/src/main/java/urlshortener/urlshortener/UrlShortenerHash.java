@@ -1,17 +1,16 @@
 package urlshortener.urlshortener;
 
 import java.rmi.NotBoundException;
-import java.sql.SQLException;
 import java.util.Base64;
 
 import urlshortener.LogEntryContentPut;
 import urlshortener.raft.Raft;
 
 public class UrlShortenerHash implements UrlShortener {
-    DatabasePostgres db;
+    Database db;
     Raft raft;
 
-    public UrlShortenerHash(DatabasePostgres db, Raft raft){
+    public UrlShortenerHash(Database db, Raft raft){
         this.db = db;
         this.raft = raft;
     }
@@ -40,11 +39,6 @@ public class UrlShortenerHash implements UrlShortener {
 
     @Override
     public String enlongate(String id) {
-        try {
-            return db.get(id);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return db.get(id);
     }
 }

@@ -19,12 +19,13 @@ import com.sun.net.httpserver.HttpServer;
 
 import urlshortener.raft.Raft;
 import urlshortener.server.UrlShortenerHttpHandler;
+import urlshortener.urlshortener.Database;
 import urlshortener.urlshortener.DatabasePostgres;
 import urlshortener.urlshortener.UrlShortener;
 import urlshortener.urlshortener.UrlShortenerHash;
 
 public class App {
-    static DatabasePostgres db;
+    static Database db;
     static UrlShortener urlShortener;
 
     static Raft raft;
