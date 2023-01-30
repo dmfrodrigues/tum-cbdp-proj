@@ -472,6 +472,8 @@ public class Raft implements RaftRemote {
     }
 
     public void register() throws RemoteException, AlreadyBoundException {
+        System.setProperty("java.rmi.server.hostname", myAddress);
+
         Registry registry = LocateRegistry.getRegistry();
         RaftRemote stub = (RaftRemote) UnicastRemoteObject.exportObject(this, 0);
         registry.bind("raft", stub);
