@@ -12,9 +12,6 @@ public class LogEntry implements Serializable {
     }
 
     public void apply(){
-        if(content == null){
-            System.out.println("FODASSE");
-        }
         content.apply();
     };
 }

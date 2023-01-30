@@ -236,9 +236,8 @@ public class Raft implements RaftRemote {
 
     @Override
     public RaftResponse<Boolean> appendEntriesRPC(int term, int prevLogIndex, int prevLogTerm, List<LogEntry> entries, int leaderCommit) {
-        // Initial work
-        if(entries.size() > 0)
-            System.out.println("Got non-empty appendEntriesRPC");
+        // if(entries.size() > 0)
+        //     System.out.println("Got non-empty appendEntriesRPC");
 
         // 1.
         if(term < currentTerm)
@@ -362,7 +361,7 @@ public class Raft implements RaftRemote {
                     String peerAddress = it.next();
                     if(matchIndex.get(peerAddress) > commitIndex) ++numberPeersThatHaveIndex;
                 }
-                if(numberPeersThatHaveIndex >= members.size()/2 + 1){
+                if(numberPeersThatHaveIndex >= members.size()/2 + 1 && commitIndex+1 < log.size()){
                     ++commitIndex;
                     log.get(commitIndex).apply();
                 } else break;

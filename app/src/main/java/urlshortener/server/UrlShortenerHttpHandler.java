@@ -29,10 +29,7 @@ public class UrlShortenerHttpHandler implements HttpHandler {
                 String value = (s.hasNext() ? s.next() : "");
                 s.close();
 
-                System.out.println("PUT " + value);
-
                 String key = urlShortener.shorten(value);
-
                 stringBuilder.append(key);
 
                 String response = stringBuilder.toString();
@@ -46,8 +43,6 @@ public class UrlShortenerHttpHandler implements HttpHandler {
             case "GET": {
                 String[] uriParts = httpExchange.getRequestURI().toString().split("/");
                 String key = uriParts[uriParts.length-1];
-
-                System.out.println("GET " + key);
 
                 String url = urlShortener.enlongate(key);
 
