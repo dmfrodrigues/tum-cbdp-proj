@@ -63,9 +63,12 @@ public class App {
             String myAddress = getMyAddress();
             String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
 
-            db = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
-            db.seed();
-            raft = new Raft(myAddress);
+            DatabasePostgres databasePostgres = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+            db = databasePostgres;
+            db.seed(false);
+            databasePostgres.loadLog();
+
+            raft = new Raft(myAddress, db, db);
             node = new Node(raft);
             urlShortener = new UrlShortenerHash(db, raft);
 

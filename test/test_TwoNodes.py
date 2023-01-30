@@ -1,5 +1,6 @@
 import unittest
 import requests
+import time
 
 import utils
 
@@ -24,6 +25,8 @@ class TestTwoNodes(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         shortened = r.text
         print("shortened=" + shortened)
+        
+        time.sleep(1)
 
         for peer in self.peers:
             shortenedUrl = utils.getShortenedUrl(peer, shortened)

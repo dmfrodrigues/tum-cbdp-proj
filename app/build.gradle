@@ -34,4 +34,5 @@ application {
 
 test {
     testLogging.showStandardStreams = true
+    maxParallelForks = 1
 }

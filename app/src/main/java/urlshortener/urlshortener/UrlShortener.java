@@ -1,5 +1,6 @@
 package urlshortener.urlshortener;
 
+import java.io.IOException;
 import java.rmi.NotBoundException;
 
 import urlshortener.LogEntryContentPut;
@@ -20,9 +21,9 @@ public abstract class UrlShortener {
         String id = shortenURL(url);
 
         try {
-            if(!raft.appendEntry(new LogEntryContentPut(id, url)))
+            if(!raft.appendEntryRPC(new LogEntryContentPut(id, url)))
                 return null;
-        } catch (InterruptedException | NotBoundException e) {
+        } catch (InterruptedException | NotBoundException | IOException e) {
             e.printStackTrace();
             return null;
         }

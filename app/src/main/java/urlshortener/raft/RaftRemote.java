@@ -1,5 +1,6 @@
 package urlshortener.raft;
 
+import java.io.IOException;
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -61,8 +62,9 @@ public interface RaftRemote extends Remote {
      * @return              Response; contains the term of the callee, and the
      *                      result (success or otherwise)
      * @throws RemoteException
+     * @throws IOException
      */
-    public RaftResponse<Boolean> appendEntriesRPC(int term, int prevLogIndex, int prevLogTerm, List<LogEntry> entries, int leaderCommit) throws RemoteException;
+    public RaftResponse<Boolean> appendEntriesRPC(int term, int prevLogIndex, int prevLogTerm, List<LogEntry> entries, int leaderCommit) throws RemoteException, IOException;
 
     /**
      * RPC. Request vote.
@@ -77,8 +79,9 @@ public interface RaftRemote extends Remote {
      *                      result (success or otherwise)
      * @throws RemoteException
      * @throws ServerNotActiveException
+     * @throws IOException
      */
-    public RaftResponse<Boolean> requestVoteRPC(int term, int lastLogIndex, int lastLogTerm) throws RemoteException, ServerNotActiveException;
+    public RaftResponse<Boolean> requestVoteRPC(int term, int lastLogIndex, int lastLogTerm) throws RemoteException, ServerNotActiveException, IOException;
 
-    public boolean appendEntry(LogEntryContent logEntryContent) throws RemoteException, InterruptedException, NotBoundException;
+    public boolean appendEntryRPC(LogEntryContent logEntryContent) throws RemoteException, InterruptedException, NotBoundException, IOException;
 }

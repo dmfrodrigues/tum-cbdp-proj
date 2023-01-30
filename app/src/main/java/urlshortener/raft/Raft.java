@@ -1,5 +1,6 @@
 package urlshortener.raft;
 
+import java.io.IOException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -23,6 +24,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import urlshortener.Utils;
+import urlshortener.raft.PersistentMap.Stored;
+import urlshortener.urlshortener.Database;
 
 public class Raft implements RaftRemote {
     private static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
@@ -61,9 +64,9 @@ public class Raft implements RaftRemote {
     // Persistent state
     // TODO: all the persistent state variables must be stored in secondary
     // memory
-    int currentTerm = 0;
-    String votedFor;
-    ArrayList<LogEntry> log = new ArrayList<>();
+    Stored<Integer> currentTerm;
+    Stored<String> votedFor;
+    PersistentLog log;
 
     // Volatile state
     int commitIndex = -1;
@@ -79,10 +82,15 @@ public class Raft implements RaftRemote {
     //
     ExecutorService executor = Executors.newFixedThreadPool(4);
 
-    public Raft(String myAddress){
+    public Raft(String myAddress, PersistentMap map, PersistentLog log) throws IOException {
         this.myAddress = myAddress;
         this.leaderAddress = myAddress;
         this.state = State.LEADER;
+
+        currentTerm = map.loadStoredVariable("currentTerm", 0);
+        votedFor = map.loadStoredVariable("votedFor", null);
+        this.log = log;
+
         members.add(myAddress);
         nextIndex = new HashMap<>(){{
             put(myAddress, 0);
@@ -235,22 +243,22 @@ public class Raft implements RaftRemote {
     }
 
     @Override
-    public RaftResponse<Boolean> appendEntriesRPC(int term, int prevLogIndex, int prevLogTerm, List<LogEntry> entries, int leaderCommit) {
+    public RaftResponse<Boolean> appendEntriesRPC(int term, int prevLogIndex, int prevLogTerm, List<LogEntry> entries, int leaderCommit) throws IOException {
         // if(entries.size() > 0)
         //     System.out.println("Got non-empty appendEntriesRPC");
 
         // 1.
-        if(term < currentTerm)
-            return new RaftResponse<Boolean>(currentTerm, false);
+        if(term < currentTerm.get())
+            return new RaftResponse<Boolean>(currentTerm.get(), false);
         // 2.
         if(prevLogIndex >= 0 && (prevLogIndex >= log.size() || log.get(prevLogIndex).term != term))
-            return new RaftResponse<Boolean>(currentTerm, false);
+            return new RaftResponse<Boolean>(currentTerm.get(), false);
         // 3.
         for(int i = prevLogIndex + 1; i < log.size(); ++i){
             int k = i - prevLogIndex;
             if(k >= entries.size()) break;
             if(log.get(i).term != entries.get(k).term){
-                log.subList(i, log.size()).clear();
+                log.deleteAfter(i);
                 break;
             }
         }
@@ -267,8 +275,8 @@ public class Raft implements RaftRemote {
             ++lastApplied;
             log.get(lastApplied).apply();
         }
-        if(term > currentTerm){
-            currentTerm = term;
+        if(term > currentTerm.get()){
+            currentTerm.set(term);
             synchronized(state){
                 state = State.FOLLOWER;
                 nextIndex = null;
@@ -279,15 +287,15 @@ public class Raft implements RaftRemote {
         // System.out.println("Updated heartbeat timestamp");
         heartbeatTimestampNanos.set(System.nanoTime());
 
-        return new RaftResponse<Boolean>(currentTerm, true);
+        return new RaftResponse<Boolean>(currentTerm.get(), true);
     }
 
     @Override
-    public RaftResponse<Boolean> requestVoteRPC(int term, int lastLogIndex, int lastLogTerm) throws ServerNotActiveException {
+    public RaftResponse<Boolean> requestVoteRPC(int term, int lastLogIndex, int lastLogTerm) throws ServerNotActiveException, IOException {
         String candidateAddress = RemoteServer.getClientHost();
 
-        if(term < currentTerm)
-            return new RaftResponse<Boolean>(currentTerm, false);
+        if(term < currentTerm.get())
+            return new RaftResponse<Boolean>(currentTerm.get(), false);
 
         boolean candidateLogIsAtLeastAsUpToDateAsReceiverLog = true; // TODO
 
@@ -295,15 +303,15 @@ public class Raft implements RaftRemote {
             (votedFor == null || votedFor.equals(candidateAddress)) &&
             candidateLogIsAtLeastAsUpToDateAsReceiverLog
         ){
-            votedFor = candidateAddress;
+            votedFor.set(candidateAddress);
             System.out.println("Candidate " + candidateAddress + " asked me to vote for term " + term + ", I said YES");
             heartbeatTimestampNanos.set(System.nanoTime());
-            return new RaftResponse<Boolean>(currentTerm, true);
+            return new RaftResponse<Boolean>(currentTerm.get(), true);
         }
 
         // Rules for all servers
-        if(term > currentTerm){
-            currentTerm = term;
+        if(term > currentTerm.get()){
+            currentTerm.set(term);
             synchronized(state){
                 state = State.FOLLOWER;
                 nextIndex = null;
@@ -311,10 +319,10 @@ public class Raft implements RaftRemote {
             }
         }
         
-        return new RaftResponse<Boolean>(currentTerm, false);
+        return new RaftResponse<Boolean>(currentTerm.get(), false);
     }
 
-    public void run() throws InterruptedException, NotBoundException, ServerNotActiveException {
+    public void run() throws InterruptedException, NotBoundException, ServerNotActiveException, IOException {
         long sleep = 0;
         while(true){
             synchronized(state){
@@ -336,7 +344,7 @@ public class Raft implements RaftRemote {
         }
     }
 
-    private long loopLeader() throws InterruptedException, NotBoundException {
+    private long loopLeader() throws InterruptedException, NotBoundException, IOException {
         long tBeginNanos = System.nanoTime();
         synchronized(members){
             // System.out.println("Sending heartbeat");
@@ -354,6 +362,7 @@ public class Raft implements RaftRemote {
                 }
             }
 
+            int oldCommitIndex = commitIndex;
             while(true){
                 int numberPeersThatHaveIndex = 0;
                 it = members.iterator();
@@ -366,6 +375,15 @@ public class Raft implements RaftRemote {
                     log.get(commitIndex).apply();
                 } else break;
             }
+            /**
+             * This allows that, if there are commits, an extraordinary
+             * heartbeat is sent to commit it. This does not make Raft
+             * linearizable. It merely expedites the process of committing log
+             * entries in the peers.
+             */
+            if(oldCommitIndex != commitIndex){
+                loopLeader();
+            }
         }
         long tEndNanos = System.nanoTime();
         long elapsedMillis = (tEndNanos-tBeginNanos)/1000000;
@@ -373,14 +391,14 @@ public class Raft implements RaftRemote {
         return sleep;
     }
 
-    private void heartbeatPeer(RaftRemote peer, String peerAddress) throws RemoteException {
+    private void heartbeatPeer(RaftRemote peer, String peerAddress) throws IOException {
         int nextIndexPeer = nextIndex.get(peerAddress);
 
         while(true){
             int N = log.size();
-            List<LogEntry> entries = new ArrayList<LogEntry>(log.subList(nextIndexPeer, N));
+            List<LogEntry> entries = new ArrayList<>(log.getAfter(nextIndexPeer));
             RaftResponse<Boolean> response = peer.appendEntriesRPC(
-                currentTerm,
+                currentTerm.get(),
                 nextIndexPeer-1,
                 (nextIndexPeer >= N ? -1 : log.get(nextIndexPeer).term),
                 entries,
@@ -415,9 +433,9 @@ public class Raft implements RaftRemote {
     }
 
     // Start election
-    private long loopCandidate() throws NotBoundException, ServerNotActiveException {
-        ++currentTerm;
-        votedFor = myAddress;
+    private long loopCandidate() throws NotBoundException, ServerNotActiveException, IOException {
+        currentTerm.set(currentTerm.get()+1);
+        votedFor.set(myAddress);
 
         System.out.println("Starting election for term " + currentTerm);
 
@@ -439,7 +457,7 @@ public class Raft implements RaftRemote {
                 try {
                     RaftRemote peer = Raft.connect(peerAddress);
                     RaftResponse<Boolean> response = peer.requestVoteRPC(
-                        currentTerm,
+                        currentTerm.get(),
                         log.size()-1,
                         (log.size() >= 1 ? log.get(log.size()-1).term : -1)
                     );
@@ -482,17 +500,17 @@ public class Raft implements RaftRemote {
         registry.unbind("raft");
     }
 
-    public boolean appendEntry(LogEntryContent logEntryContent) throws InterruptedException, NotBoundException {
+    public boolean appendEntryRPC(LogEntryContent logEntryContent) throws InterruptedException, NotBoundException, IOException {
         if(!state.equals(State.LEADER)){
             try {
                 RaftRemote leader = Raft.connect(leaderAddress);
-                return leader.appendEntry(logEntryContent);
+                return leader.appendEntryRPC(logEntryContent);
             } catch (RemoteException e) {
                 return false;
             }
         }
 
-        LogEntry logEntry = new LogEntry(currentTerm, logEntryContent);
+        LogEntry logEntry = new LogEntry(currentTerm.get(), logEntryContent);
 
         log.add(logEntry);
 

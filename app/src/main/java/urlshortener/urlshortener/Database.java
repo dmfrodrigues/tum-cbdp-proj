@@ -1,9 +1,13 @@
 package urlshortener.urlshortener;
 
-public interface Database {
-    public boolean seed();
+import urlshortener.raft.PersistentLog;
+import urlshortener.raft.PersistentMap;
 
-    public boolean put(String key, String value);
+public abstract class Database extends PersistentMap implements PersistentLog {
+    abstract public boolean seed();
+    abstract public boolean seed(boolean force);
 
-    public String get(String key);
+    abstract public boolean put(String key, String value);
+
+    abstract public String get(String key);
 }
