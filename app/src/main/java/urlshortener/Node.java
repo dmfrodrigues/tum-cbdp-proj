@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import urlshortener.raft.Raft;
-import urlshortener.server.UrlShortenerHttpHandler;
+import urlshortener.server.UrlShortenerHttpHandlerString;
 import urlshortener.urlshortener.Database;
 import urlshortener.urlshortener.DatabasePostgres;
 import urlshortener.urlshortener.UrlShortener;
@@ -77,7 +77,7 @@ public class Node {
 
     private void server() throws IOException {
         server = HttpServer.create(new InetSocketAddress("0.0.0.0", 8001), 0);
-        server.createContext("/", new UrlShortenerHttpHandler(urlShortener));
+        server.createContext("/", new UrlShortenerHttpHandlerString(urlShortener));
         server.setExecutor(serverThreadPoolExecutor);
         server.start();
 

@@ -5,13 +5,13 @@ import java.rmi.NotBoundException;
 
 import urlshortener.raft.Raft;
 
-public abstract class UrlShortener {
+public abstract class UrlShortener<T> {
     abstract public String shortenURL(String url);
 
-    Database db;
+    Database<T> db;
     Raft raft;
 
-    public UrlShortener(Database db, Raft raft){
+    public UrlShortener(Database<T> db, Raft raft){
         this.db = db;
         this.raft = raft;
     }
