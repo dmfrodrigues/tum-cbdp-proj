@@ -152,6 +152,17 @@ public class DatabasePostgres extends Database {
         }
     }
 
+    
+    @Override
+    public boolean putKeyValue(String key, String value) {
+        return put(key, value);
+    }
+
+    @Override
+    public String getKeyValue(String key) {
+        return get(key);
+    }
+
     ArrayList<LogEntry> log = new ArrayList<>();
 
     public boolean loadLog(){
