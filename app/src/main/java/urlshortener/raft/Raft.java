@@ -438,6 +438,8 @@ public class Raft implements RaftRemote {
 
     // Start election
     private long loopCandidate() throws NotBoundException, ServerNotActiveException, IOException {
+        long tBeginNanos = System.nanoTime();
+
         currentTerm.set(currentTerm.get()+1);
         votedFor.set(myAddress);
 
@@ -504,7 +506,10 @@ public class Raft implements RaftRemote {
             }
         }
 
-        return 0; // TODO: should not return 0, since there must be sleep between elections
+        long tEndNanos = System.nanoTime();
+        long elapsedMillis = (tEndNanos-tBeginNanos)/1000000;
+        long sleep = FOLLOWER_TIMEOUT_MILLIS-elapsedMillis;
+        return sleep;
     }
 
     private void becomeLeader(){
