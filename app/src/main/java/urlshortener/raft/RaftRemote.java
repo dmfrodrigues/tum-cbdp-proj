@@ -6,7 +6,6 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.server.ServerNotActiveException;
 import java.util.List;
-import java.util.Set;
 
 public interface RaftRemote extends Remote {
     public String getLeaderAddress() throws RemoteException;
@@ -21,7 +20,7 @@ public interface RaftRemote extends Remote {
      * @throws ServerNotActiveException
      * @throws NotBoundException
      */
-    public Set<String> joinRPC() throws RemoteException, ServerNotActiveException, NotBoundException;
+    public Members joinRPC() throws RemoteException, ServerNotActiveException, NotBoundException;
 
     /**
      * RPC. Leader informs followers of the entry of a new member.
@@ -45,7 +44,7 @@ public interface RaftRemote extends Remote {
      * 
      * @return  Set of members that the callee did not know
      */
-    public Set<String> membersGossipRPC(Set<String> members) throws RemoteException;
+    public Members membersGossipRPC(Members members) throws RemoteException;
 
     /**
      * RPC. Append entries.

@@ -2,6 +2,7 @@ package urlshortener.raft;
 
 import java.io.IOException;
 import java.rmi.AlreadyBoundException;
+import java.rmi.ConnectIOException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -13,35 +14,34 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import urlshortener.Utils;
 import urlshortener.raft.PersistentMap.Stored;
 import urlshortener.rmi.MyRMISocketFactory;
 
 public class Raft implements RaftRemote {
-    private static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
-        System.out.println("L31");
+    public static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
         Registry peerRegistry = LocateRegistry.getRegistry(peerAddress);
-        System.out.println("L33, " + peerRegistry);
         RaftRemote peer = (RaftRemote)peerRegistry.lookup("raft");
-        System.out.println("L35");
         return peer;
     }
 
     static private int RMI_TIMEOUT_MILLIS = 100;
-    static private long LEADER_HEARTBEAT_MILLIS = 5000;
-    static private long FOLLOWER_TIMEOUT_MIN_MILLIS = 10000;
-    static private long FOLLOWER_TIMEOUT_MAX_MILLIS = 20000;
+    static private long LEADER_HEARTBEAT_MILLIS = 500;
+    static private long FOLLOWER_TIMEOUT_MIN_MILLIS = 1000;
+    static private long FOLLOWER_TIMEOUT_MAX_MILLIS = 2000;
 
     private long FOLLOWER_TIMEOUT_MILLIS;
 
@@ -63,7 +63,7 @@ public class Raft implements RaftRemote {
 
     // Time between consecutive members gossip
     static private long LEADER_JOIN_GOSSIP_MILLIS = 1000;
-    Set<String> members = new HashSet<>();
+    Members members = new Members();
     ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(1);
 
     // Persistent state
@@ -154,38 +154,37 @@ public class Raft implements RaftRemote {
                 while(true){
                     String peerAddress = null;
 
-                    Set<String> membersCopy;
+                    Members membersCopy;
                     synchronized(members){
                         if(members.size() <= 1) break;
                         peerAddress = Utils.Rand.getRandomFromSet(random, members);
-                        membersCopy = new HashSet<>(members);
+                        members.checkIfAlive();
+                        membersCopy = new Members(members);
                     }
 
                     if(peerAddress == null || peerAddress.equals(myAddress)){
                         peerAddress = null;
                         continue;
                     }
+
+                    Members newMembers = new Members();
                     try {
-                        // TODO: check if all members are online before gossipping
-                        RaftRemote peer = Raft.connect(peerAddress);
-                        Set<String> newMembers = peer.membersGossipRPC(membersCopy);
-                        // System.out.println("Gossipped with " + peerAddress + " about network members");
-                        
-                        synchronized(members){
-                            newMembers.removeAll(members);
-                            if(newMembers.size() > 0)
-                                System.out.println("Gossip response: just learned about members [" + String.join(", ", newMembers) + "]");
-                        
-                            members.addAll(newMembers);
+                        boolean b = membersCopy.call(peerAddress, (RaftRemote peer) -> { newMembers.addAll(peer.membersGossipRPC(membersCopy)); });
+                        if(b){
+                            // System.out.println("Gossipped with " + peerAddress + " about network members");
+
+                            synchronized(members){
+                                newMembers.removeAll(members);
+                                if(newMembers.size() > 0)
+                                    System.out.println("Gossip response: just learned about members [" + String.join(", ", newMembers) + "]");
+                            
+                                members.addAll(newMembers);
+                            }
+                            break;
                         }
-                        break;
-                    } catch (RemoteException e) {
-                        System.err.println("Peer " + peerAddress + " is not working, removing from members");
-                        members.remove(peerAddress);
-                    } catch (NotBoundException e) {
-                        System.out.println("L183");
+                    } catch(Exception e){
                         e.printStackTrace();
-                        break;
+                        return;
                     }
                 }
             }
@@ -195,22 +194,23 @@ public class Raft implements RaftRemote {
     }
 
     @Override
-    public Set<String> membersGossipRPC(Set<String> members) throws RemoteException {
+    public Members membersGossipRPC(Members members) throws RemoteException {
         members.removeAll(this.members);
         if(members.size() > 0)
             System.out.println("Gossip request: just learned about members [" + String.join(", ", members) + "]");
 
-        Set<String> ret;
+        Members ret;
         synchronized(this.members){
+            this.members.checkIfAlive();
             this.members.addAll(members);
-            ret = new HashSet<>(this.members);
+            ret = new Members(this.members);
         }
         ret.removeAll(members);
         return ret;
     }
 
     @Override
-    public Set<String> joinRPC() throws RemoteException, ServerNotActiveException, NotBoundException {
+    public Members joinRPC() throws RemoteException, ServerNotActiveException, NotBoundException {
         if(state != State.LEADER){
             throw new InvalidStateError("Can only call joinRPC() if the callee is a leader");
         }
@@ -221,17 +221,13 @@ public class Raft implements RaftRemote {
             matchIndex.put(newPeerAddress, -1);
         
             // Inform all members that a new peer has joined
-            Iterator<String> it = members.iterator();
-            while(it.hasNext()){
-                String peerAddress = it.next();
-                if(peerAddress.equals(myAddress) || peerAddress.equals(newPeerAddress)) continue;
-                try {
-                    RaftRemote peer = Raft.connect(peerAddress);
+            try {
+                members.forEach((String peerAddress, RaftRemote peer) -> {
+                    if(peerAddress.equals(myAddress) || peerAddress.equals(newPeerAddress)) return;
                     peer.addMemberRPC(newPeerAddress);
-                } catch (RemoteException e) {
-                    System.err.println("Peer " + peerAddress + " is not working, removing from members");
-                    it.remove();
-                }
+                });
+            } catch(Exception e){
+                e.printStackTrace();
             }
             System.out.println("Node " + newPeerAddress + " joined the network");
 
@@ -353,38 +349,36 @@ public class Raft implements RaftRemote {
     private long loopLeader() throws InterruptedException, NotBoundException, IOException {
         long tBeginNanos = System.nanoTime();
         synchronized(members){
-            System.out.println("Sending heartbeat");
-            Iterator<String> it = members.iterator();
-            while(it.hasNext()){
-                String peerAddress = it.next();
-                if(peerAddress.equals(myAddress)) continue;
-                try {
-                    System.out.println("    Trying to send heartbeat to " + peerAddress);
-                    RaftRemote peer = Raft.connect(peerAddress);
-                    heartbeatPeer(peer, peerAddress);
-                    System.out.println("    Sent heartbeat to " + peerAddress);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                    System.err.println("Peer " + peerAddress + " is not working, removing from members");
-                    it.remove();
-                } catch(Exception e){
-                    e.printStackTrace();
-                }
+
+            // System.out.println("Sending heartbeat");
+            try {
+                members.forEach((String peerAddress, RaftRemote peer) -> {
+                    if(peerAddress.equals(myAddress)) return;
+                    try {
+                        // System.out.println("    Trying to send heartbeat to " + peerAddress);
+                        heartbeatPeer(peer, peerAddress);
+                        // System.out.println("    Sent heartbeat to " + peerAddress);
+                    } catch(Exception e){
+                        e.printStackTrace();
+                    }
+                });
+            } catch(Exception e){
+                e.printStackTrace();
             }
 
             int oldCommitIndex = commitIndex;
             while(true){
                 int numberPeersThatHaveIndex = 0;
-                it = members.iterator();
-                while(it.hasNext()){
-                    String peerAddress = it.next();
-                    if(matchIndex.get(peerAddress) > commitIndex) ++numberPeersThatHaveIndex;
+                for(String peerAddress: members){
+                    if(matchIndex.get(peerAddress) > commitIndex)
+                        ++numberPeersThatHaveIndex;
                 }
                 if(numberPeersThatHaveIndex >= members.size()/2 + 1 && commitIndex+1 < log.size()){
                     ++commitIndex;
                     log.get(commitIndex).apply();
                 } else break;
             }
+
             /**
              * This allows that, if there are commits, an extraordinary
              * heartbeat is sent to commit it. This does not make Raft
@@ -459,43 +453,69 @@ public class Raft implements RaftRemote {
 
             int numberVotes = 1;
 
-            Iterator<String> it = members.iterator();
-            while(state == State.CANDIDATE && it.hasNext()){
-                String peerAddress = it.next();
-                if(peerAddress.equals(myAddress)) continue;
-
+            Set<String> abortedMembers = new HashSet<>();
+            List<CompletableFuture<Boolean>> futures = members
+                .stream()
+                .map((String peerAddress) -> {
+                    CompletableFuture<Boolean> future = new CompletableFuture<>();
+                    executor.submit(() -> {
+                        try {
+                            RaftRemote peer = Raft.connect(peerAddress);
+                            RaftResponse<Boolean> response = peer.requestVoteRPC(
+                                currentTerm.get(),
+                                log.size()-1,
+                                (log.size() >= 1 ? log.get(log.size()-1).term : -1)
+                            );
+                            if(response.get()){
+                                System.out.println("Got vote from " + peerAddress);
+                            }
+                            // TODO: do something with the term in the response
+                            future.complete(response.get());
+                        } catch(ConnectIOException e){
+                            System.err.println("Peer " + peerAddress + " not working");
+                            synchronized(abortedMembers){
+                                abortedMembers.add(peerAddress);
+                            }
+                        } catch (ServerNotActiveException | IOException | NotBoundException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                    return future;
+                })
+                .collect(Collectors.toList());
+            
+            while(futures.size() > 0 && numberVotes < members.size()/2 + 1){
+                CompletableFuture<Object> anyFuture = CompletableFuture.anyOf(
+                    futures.toArray(new CompletableFuture[futures.size()])
+                );
                 try {
-                    RaftRemote peer = Raft.connect(peerAddress);
-                    RaftResponse<Boolean> response = peer.requestVoteRPC(
-                        currentTerm.get(),
-                        log.size()-1,
-                        (log.size() >= 1 ? log.get(log.size()-1).term : -1)
-                    );
-                    if(response.get()){
-                        System.out.println("Got vote from " + peerAddress);
-                        ++numberVotes;
-                    }
-                    // TODO: do something with the term in the response
-                } catch (RemoteException e) {
-                    System.err.println("Peer " + peerAddress + " is not working, removing from members");
-                    it.remove();
+                    Boolean b = (Boolean) anyFuture.get();
+                    numberVotes += (b ? 1 : 0);
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                    continue;
                 }
+            }
 
-                if(numberVotes >= members.size()/2 + 1){
-                    state = State.LEADER;
-                    System.out.println("Got elected leader for term " + currentTerm);
-                    nextIndex = new HashMap<>();
-                    matchIndex = new HashMap<>();
-                    for(String peerAddr: members){
-                        nextIndex.put(peerAddr, log.size());
-                        matchIndex.put(peerAddr, 0);
-                    }
-                    break;
-                }
+            members.removeAll(abortedMembers);
+
+            if(numberVotes >= members.size()/2 + 1){
+                becomeLeader();
             }
         }
 
-        return 0;
+        return 0; // TODO: should not return 0, since there must be sleep between elections
+    }
+
+    private void becomeLeader(){
+        state = State.LEADER;
+        System.out.println("Became leader for term " + currentTerm);
+        nextIndex = new HashMap<>();
+        matchIndex = new HashMap<>();
+        for(String peerAddr: members){
+            nextIndex.put(peerAddr, log.size());
+            matchIndex.put(peerAddr, 0);
+        }
     }
 
     public void register() throws AlreadyBoundException, IOException {
