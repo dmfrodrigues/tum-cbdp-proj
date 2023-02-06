@@ -8,9 +8,8 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import urlshortener.urlshortener.Database;
-import urlshortener.urlshortener.DatabasePostgresString;
-import urlshortener.urlshortener.UrlShortenerHash;
+import urlshortener.urlshortener.DatabaseOrdered;
+import urlshortener.urlshortener.DatabasePostgresLong;
 
 public class DatabasePostgresTest {
     @Test
@@ -18,17 +17,17 @@ public class DatabasePostgresTest {
         Random random = new Random(0);
 
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
-        Database<String> db = new DatabasePostgresString("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        DatabaseOrdered<Long> db = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
         db.seed();
+        db.init();
 
         int N = 10000;
         List<String> valueList = new ArrayList<>();
-        List<String> keyList = new ArrayList<>();
+        List<Long> keyList = new ArrayList<>();
         for(int i = 0; i < N; ++i){
             String value = TestUtils.getRandomURL(random);
-            String key = UrlShortenerHash.staticShortenURL(value);
             valueList.add(value);
-            keyList.add(key);
+            keyList.add(Long.valueOf(i));
         }
 
         System.out.println("N=" + N);
@@ -37,7 +36,7 @@ public class DatabasePostgresTest {
 
         tBegin = System.nanoTime();
         for(int i = 0; i < N; ++i){
-            db.put(keyList.get(i), valueList.get(i));
+            db.putKeyValue(keyList.get(i), valueList.get(i));
         }
         tEnd = System.nanoTime();
         elapsed = tEnd-tBegin;
@@ -45,7 +44,7 @@ public class DatabasePostgresTest {
 
         tBegin = System.nanoTime();
         for(int i = 0; i < N; ++i){
-            db.get(keyList.get(i));
+            db.getKeyValue(keyList.get(i));
         }
         tEnd = System.nanoTime();
         elapsed = tEnd-tBegin;

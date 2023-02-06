@@ -3,7 +3,7 @@ package urlshortener.urlshortener;
 import urlshortener.App;
 import urlshortener.raft.LogEntryContent;
 
-public class LogEntryContentPut<T> implements LogEntryContent {
+public class LogEntryContentPut implements LogEntryContent {
     private String key;
     private String value;
 

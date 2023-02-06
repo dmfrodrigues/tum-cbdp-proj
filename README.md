@@ -1,63 +1,44 @@
-# Project: URL shortener
+# URL shortener
 
-The goal of this project is to implement the storage backend for a transactional URL shortener service (c.f. [bit.ly](https://bit.ly)).
-The backend should be fault tolerant and ensure that URLs produce a consistent short value.
+- **Project name:** URL shortener
+- **Short description:** Distributed, reliable URL shortener
+- **Environment:** Linux, Azure
+- **Tools:** Java, RMI, Docker
+- **Institution:** [TUM](https://www.tum.de/en/)
+- **Course:** [CBDP](https://db.in.tum.de/teaching/ws2021/clouddataprocessing/?lang=de) (Cloud-Based Data Processing)
+- **Project grade:** -
+- **Group:** 43
+- **Group members:** 
+    - [Diogo Miguel Ferreira Rodrigues](https://github.com/dmfrodrigues) (<dmfrodrigues2000@gmail.com>)
+    - [João Lucas Silva Martins]()
+    - [Tiago Duarte da Silva]()
 
-## Implementation
+## To test the project
 
-To keep the mappings between URL and short id consistent, implement the Raft consensus protocol between storage nodes (see Lecture 5).
-Our workload is a simple key-value storage, where we transactionally insert a new mapping, if it does not exist already.
-For each insert, ship the insert logs to all replicas to ensure a consistent state.
-Replicas should, thus, also be able to answer read-only lookups from a short id to the full URL.
-Remember to keep these lookups efficient by using an index structure.
+To test this project, you can start the cluster using docker-compose:
 
-## Workload
-
-For the workload, you can use the same [CSV files](https://db.in.tum.de/teaching/ws2223/clouddataprocessing/data/filelist.csv) 
-that we used in the last assignments.
-You can also use the larger [ClickBench](https://github.com/ClickHouse/ClickBench) [hits](https://datasets.clickhouse.com/hits_compatible/hits.tsv.gz) dataset.
-
-## Deployment
-
-Running and deploying your project should be similar to Assignment 4.
-In the containerized environment, be aware that the local container filesystem is stateless.
-When shutting down a container (or when it crashes), its local files are not preserved.
-However, we want that our shortened URLs are persistent, even if we restart all nodes.
-
-For a local Docker setup, you can use [volumes](https://docs.docker.com/storage/volumes/):
-```
-docker volume create cbdp-volume
-docker run --mount source=cbdp-volume,target=/space ...
+```bash
+docker-compose up --build
 ```
 
-In Azure Container Instances, [Azure file shares](https://learn.microsoft.com/en-us/azure/container-instances/container-instances-volume-azure-files) have similar semantics:
-```
-az storage share create --name cbdp-volume ...
-az container create --azure-file-volume-share-name cbdp-volume \
-   --azure-file-volume-mount-path /space ...
+After waiting a few seconds, you can run
+
+```bash
+curl -X "PUT" localhost:8001 -d "https://www.tum.de/"
 ```
 
-The default configuration in Azure only allocates 1GB of memory to your instances.
-If your implementation uses more memory for your workload, you can increase the allocated memory when creating an instance.
-E.g., you can create an instance with 4GB:
-```
-az container create --memory 4 ...
+to create the shortened version of the URL (which should look something like `localhost:8001/LTExNjgwODU2NTg=`).
+
+Then you can call
+
+```bash
+curl -L localhost:8001/LTExNjgwODU2NTg= -v
 ```
 
-## Report Questions
+and you should see one of the lines containing
 
-* Describe the design of your system
-* How does your cluster handle leader crashes?
-   * How long does it take to elect a new leader?
-   * Measure the impact of election timeouts. Investigate what happens when it gets too short / too long.
-* Analyze the load of your nodes:
-   * How much resources do your nodes use?
-   * Where do inserts create most load?
-   * Do lookups distribute the load evenly among replicas?
-* How many nodes should you use for this system? What are their roles?
-* Measure the latency to generate a new short URL
-   * Analyze where your system spends time during this operation
-* Measure the lookup latency to get the URL from a short id
-* How does your system scale?
-   * Measure the latency with increased data inserted, e.g., in 10% increments of inserted short URLs
-   * Measure the system performance with more nodes
+```txt
+Location: https://www.tum.de/
+```
+
+Or you can also navigate to http://localhost:8001/LTExNjgwODU2NTg= in your browser, and verify that your browser automatically redirects you.

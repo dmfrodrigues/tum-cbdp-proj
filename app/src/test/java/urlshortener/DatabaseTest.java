@@ -8,14 +8,14 @@ import java.sql.SQLException;
 import org.junit.Test;
 
 import urlshortener.raft.PersistentMap.Stored;
-import urlshortener.urlshortener.Database;
-import urlshortener.urlshortener.DatabasePostgresString;
+import urlshortener.urlshortener.DatabaseOrdered;
+import urlshortener.urlshortener.DatabasePostgresLong;
 
 public class DatabaseTest {
     @Test
     public void testStoredVariables() throws SQLException, IOException {
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
-        Database<String> db = new DatabasePostgresString("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        DatabaseOrdered<Long> db = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
         db.seed();
 
         // Single variable
