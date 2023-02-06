@@ -63,7 +63,7 @@ public class DatabasePostgresLong extends DatabaseOrdered<Long> {
 
 
         logLoadStmt = conn.prepareStatement("""
-            SELECT (id, term, content) FROM log
+            SELECT id, term, content FROM log
         """);
         logDeleteAfterStmt = conn.prepareStatement("""
             DELETE FROM log
@@ -147,13 +147,13 @@ public class DatabasePostgresLong extends DatabaseOrdered<Long> {
     }
 
     public boolean init(){
-        System.out.println("Getting highest key");
-        String getHighestKeyStr = """
-            SELECT COALESCE(MAX(key),-1) AS maxKey FROM kv
-        """;
         try {
+            // Selecting schema urlshortener
             Statement st = conn.createStatement();
-            ResultSet rs = st.executeQuery(getHighestKeyStr);
+            st.execute("SET search_path TO urlshortener");
+
+            // Getting highest key
+            ResultSet rs = st.executeQuery("SELECT COALESCE(MAX(key),-1) AS maxKey FROM kv");
             if(!rs.next()) return false;
             highestKey = rs.getLong("maxKey");
             st.close();

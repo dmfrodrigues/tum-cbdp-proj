@@ -98,10 +98,10 @@ public class Raft implements RaftRemote {
 
         members.add(myAddress);
         nextIndex = new HashMap<>(){{
-            put(myAddress, 0);
+            put(myAddress, log.size());
         }};
         matchIndex = new HashMap<>(){{
-            put(myAddress, -1);
+            put(myAddress, log.size()-1);
         }};
 
         int seed = myAddress.hashCode();
