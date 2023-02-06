@@ -40,7 +40,7 @@ public class App {
             while(n.hasMoreElements()){
                 NetworkInterface e = n.nextElement();
                 // System.out.println("Interface: " + e.getName());
-                if(e.getName() == "lo") continue;
+                if(e.getName().equals("lo")) continue;
                 Enumeration<InetAddress> a = e.getInetAddresses();
                 while(a.hasMoreElements()){
                     InetAddress addr = a.nextElement();

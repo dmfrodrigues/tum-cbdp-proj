@@ -300,7 +300,7 @@ public class Raft implements RaftRemote {
         boolean candidateLogIsAtLeastAsUpToDateAsReceiverLog = true; // TODO
 
         if(
-            (votedFor == null || votedFor.equals(candidateAddress)) &&
+            (votedFor.get() == null || candidateAddress.equals(votedFor.get())) &&
             candidateLogIsAtLeastAsUpToDateAsReceiverLog
         ){
             votedFor.set(candidateAddress);
