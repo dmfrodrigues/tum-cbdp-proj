@@ -18,7 +18,7 @@ public class DatabasePostgresTest {
         Random random = new Random(0);
 
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
-        Database db = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        Database<String> db = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
         db.seed();
 
         int N = 10000;

@@ -18,7 +18,7 @@ import java.util.List;
 import urlshortener.raft.LogEntry;
 import urlshortener.raft.LogEntryContent;
 
-public class DatabasePostgres extends Database {
+public class DatabasePostgres extends Database<String> {
     private Connection conn;
 
     private PreparedStatement putStmt;

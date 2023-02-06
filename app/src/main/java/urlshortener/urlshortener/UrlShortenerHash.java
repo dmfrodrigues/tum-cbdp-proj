@@ -4,8 +4,8 @@ import java.util.Base64;
 
 import urlshortener.raft.Raft;
 
-public class UrlShortenerHash extends UrlShortener {
-    public UrlShortenerHash(Database db, Raft raft){
+public class UrlShortenerHash extends UrlShortener<String> {
+    public UrlShortenerHash(Database<String> db, Raft raft){
         super(db, raft);
     }
 

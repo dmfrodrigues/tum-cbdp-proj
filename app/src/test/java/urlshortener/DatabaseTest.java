@@ -15,7 +15,7 @@ public class DatabaseTest {
     @Test
     public void testStoredVariables() throws SQLException, IOException {
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
-        Database db = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        Database<String> db = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
         db.seed();
 
         // Single variable

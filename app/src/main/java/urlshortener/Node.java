@@ -26,9 +26,9 @@ import urlshortener.urlshortener.UrlShortenerHash;
 
 import com.sun.net.httpserver.HttpServer;
 
-public class Node {
-    public Database db;
-    private UrlShortener urlShortener;
+public class Node {    
+    public Database<String> db;
+    private UrlShortener<String> urlShortener;
 
     private Raft raft;
 
