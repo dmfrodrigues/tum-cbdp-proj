@@ -20,7 +20,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import urlshortener.raft.Raft;
 import urlshortener.server.UrlShortenerHttpHandlerString;
 import urlshortener.urlshortener.Database;
-import urlshortener.urlshortener.DatabasePostgres;
+import urlshortener.urlshortener.DatabasePostgresString;
 import urlshortener.urlshortener.UrlShortener;
 import urlshortener.urlshortener.UrlShortenerHash;
 
@@ -42,7 +42,7 @@ public class Node {
 
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
 
-        DatabasePostgres databasePostgres = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        DatabasePostgresString databasePostgres = new DatabasePostgresString("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
         db = databasePostgres;
         db.seed(false);
         databasePostgres.loadLog();

@@ -18,7 +18,7 @@ import java.util.List;
 import urlshortener.raft.LogEntry;
 import urlshortener.raft.LogEntryContent;
 
-public class DatabasePostgres extends Database<String> {
+public class DatabasePostgresString extends Database<String> {
     private Connection conn;
 
     private PreparedStatement putStmt;
@@ -32,7 +32,7 @@ public class DatabasePostgres extends Database<String> {
         return DriverManager.getConnection(url, user, password);
     }
 
-    public DatabasePostgres(String url, String user, String password) throws SQLException {
+    public DatabasePostgresString(String url, String user, String password) throws SQLException {
         conn = connect(url, user, password);
 
         putStmt = conn.prepareStatement("""

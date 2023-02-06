@@ -9,13 +9,13 @@ import org.junit.Test;
 
 import urlshortener.raft.PersistentMap.Stored;
 import urlshortener.urlshortener.Database;
-import urlshortener.urlshortener.DatabasePostgres;
+import urlshortener.urlshortener.DatabasePostgresString;
 
 public class DatabaseTest {
     @Test
     public void testStoredVariables() throws SQLException, IOException {
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
-        Database<String> db = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        Database<String> db = new DatabasePostgresString("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
         db.seed();
 
         // Single variable
