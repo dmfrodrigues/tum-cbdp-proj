@@ -1,4 +1,4 @@
-FROM amazoncorretto:17-alpine AS peer
+FROM amazoncorretto:17-alpine AS base
 
 ENV POSTGRES_PASSWORD=1234
 
@@ -43,16 +43,13 @@ RUN chmod 777 /init_db.sh
 
 RUN chmod +x *.sh gradlew
 
-RUN ./gradlew assemble
-
 EXPOSE 80
 EXPOSE 1099
 
-ENV CBDP_LEADER leader
-CMD exec ./run.join.sh "$CBDP_LEADER"
+CMD ["./run.sh"]
 
 HEALTHCHECK --interval=1s --timeout=1s --start-period=5s --retries=50 CMD cat /tmp/registered
 
-FROM peer as leader
+FROM base as prod
 
-CMD ["./run.sh"]
+RUN ./gradlew assemble

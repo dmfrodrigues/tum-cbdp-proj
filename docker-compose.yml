@@ -6,17 +6,23 @@ services:
     container_name: url-shortener_leader
     build:
       context: .
-      target: leader
+      target: base
+    volumes:
+      - ./app:/app/app
     ports:
       - 8001:8001
 
   peer:
     build:
       context: .
-      target: peer
+      target: base
     depends_on:
       leader:
         condition: service_healthy
+    environment:
+      LEADER_HOST: leader
+    volumes:
+      - ./app:/app/app
     ports:
       - 8001
 

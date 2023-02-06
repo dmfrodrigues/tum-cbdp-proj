@@ -20,7 +20,7 @@ do
   echo Deploying peer $i to leader $LEADER
   az container create -g cbdp-resourcegroup --vnet cbdpVnet --subnet cbdpSubnet\
     --restart-policy Never --name "peer$i" --image "$REGISTRY_NAME.azurecr.io"/peer\
-    --environment-variables CBDP_LEADER="$LEADER"\
+    --environment-variables LEADER_HOST="$LEADER"\
     --registry-password=$REG_PWD --registry-username=$REG_USERNAME &
 done
 
