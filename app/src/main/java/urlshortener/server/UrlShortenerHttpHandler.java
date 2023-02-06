@@ -25,7 +25,8 @@ public class UrlShortenerHttpHandler implements HttpHandler {
             switch(httpExchange.getRequestMethod()){
                 case "PUT": {
                     InputStream is = httpExchange.getRequestBody();
-                    Scanner s = new Scanner(is).useDelimiter("\\A");
+                    Scanner s = new Scanner(is);
+                    s.useDelimiter("\\A");
                     String value = (s.hasNext() ? s.next() : "");
                     s.close();
 

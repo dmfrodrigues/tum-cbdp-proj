@@ -1,5 +1,6 @@
-package urlshortener;
+package urlshortener.urlshortener;
 
+import urlshortener.App;
 import urlshortener.raft.LogEntryContent;
 
 public class LogEntryContentPut implements LogEntryContent {
@@ -13,6 +14,6 @@ public class LogEntryContentPut implements LogEntryContent {
 
     @Override
     public void apply() {
-        App.db.put(key, value);
+        App.node.db.put(key, value);
     }
 }

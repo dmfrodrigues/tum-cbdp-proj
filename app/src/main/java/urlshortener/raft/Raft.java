@@ -6,6 +6,7 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.RMISocketFactory;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
 import java.rmi.server.UnicastRemoteObject;
@@ -25,18 +26,22 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import urlshortener.Utils;
 import urlshortener.raft.PersistentMap.Stored;
-import urlshortener.urlshortener.Database;
+import urlshortener.rmi.MyRMISocketFactory;
 
 public class Raft implements RaftRemote {
     private static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
+        System.out.println("L31");
         Registry peerRegistry = LocateRegistry.getRegistry(peerAddress);
+        System.out.println("L33, " + peerRegistry);
         RaftRemote peer = (RaftRemote)peerRegistry.lookup("raft");
+        System.out.println("L35");
         return peer;
     }
 
-    static private long LEADER_HEARTBEAT_MILLIS = 500;
-    static private long FOLLOWER_TIMEOUT_MIN_MILLIS = 1000;
-    static private long FOLLOWER_TIMEOUT_MAX_MILLIS = 2000;
+    static private int RMI_TIMEOUT_MILLIS = 100;
+    static private long LEADER_HEARTBEAT_MILLIS = 5000;
+    static private long FOLLOWER_TIMEOUT_MIN_MILLIS = 10000;
+    static private long FOLLOWER_TIMEOUT_MAX_MILLIS = 20000;
 
     private long FOLLOWER_TIMEOUT_MILLIS;
 
@@ -178,6 +183,7 @@ public class Raft implements RaftRemote {
                         System.err.println("Peer " + peerAddress + " is not working, removing from members");
                         members.remove(peerAddress);
                     } catch (NotBoundException e) {
+                        System.out.println("L183");
                         e.printStackTrace();
                         break;
                     }
@@ -347,18 +353,22 @@ public class Raft implements RaftRemote {
     private long loopLeader() throws InterruptedException, NotBoundException, IOException {
         long tBeginNanos = System.nanoTime();
         synchronized(members){
-            // System.out.println("Sending heartbeat");
+            System.out.println("Sending heartbeat");
             Iterator<String> it = members.iterator();
             while(it.hasNext()){
                 String peerAddress = it.next();
                 if(peerAddress.equals(myAddress)) continue;
                 try {
+                    System.out.println("    Trying to send heartbeat to " + peerAddress);
                     RaftRemote peer = Raft.connect(peerAddress);
                     heartbeatPeer(peer, peerAddress);
-                    // System.out.println("    Sent heartbeat to " + peerAddress);
+                    System.out.println("    Sent heartbeat to " + peerAddress);
                 } catch (RemoteException e) {
+                    e.printStackTrace();
                     System.err.println("Peer " + peerAddress + " is not working, removing from members");
                     it.remove();
+                } catch(Exception e){
+                    e.printStackTrace();
                 }
             }
 
@@ -488,8 +498,8 @@ public class Raft implements RaftRemote {
         return 0;
     }
 
-    public void register() throws RemoteException, AlreadyBoundException {
-        System.setProperty("java.rmi.server.hostname", myAddress);
+    public void register() throws AlreadyBoundException, IOException {
+        RMISocketFactory.setSocketFactory(new MyRMISocketFactory(RMI_TIMEOUT_MILLIS));
 
         Registry registry = LocateRegistry.getRegistry();
         RaftRemote stub = (RaftRemote) UnicastRemoteObject.exportObject(this, 0);
