@@ -6,21 +6,21 @@ import java.rmi.NotBoundException;
 import urlshortener.raft.Raft;
 
 public abstract class UrlShortener<T> {
-    abstract public String shortenURL(String url);
+    abstract public T shortenURL(String url);
 
-    Database<T> db;
+    PersistentStateMachine<T> sm;
     Raft raft;
 
-    public UrlShortener(Database<T> db, Raft raft){
-        this.db = db;
+    public UrlShortener(PersistentStateMachine<T> sm, Raft raft){
+        this.sm = sm;
         this.raft = raft;
     }
 
-    public String shorten(String url){
-        String id = shortenURL(url);
+    public T shorten(String url){
+        T id = shortenURL(url);
 
         try {
-            if(!raft.appendEntryRPC(new LogEntryContentPut(id, url)))
+            if(!raft.appendEntryRPC(new LogEntryContentPut(id.toString(), url)))
                 return null;
         } catch (InterruptedException | NotBoundException | IOException e) {
             e.printStackTrace();
@@ -30,7 +30,7 @@ public abstract class UrlShortener<T> {
         return id;
     }
 
-    public String enlongate(String id) {
-        return db.get(id);
+    public String enlongate(T id) {
+        return sm.getKeyValue(id);
     }
 }

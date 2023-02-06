@@ -14,6 +14,6 @@ public class LogEntryContentPut implements LogEntryContent {
 
     @Override
     public void apply() {
-        App.node.db.put(key, value);
+        App.node.db.putKeyValue(key, value);
     }
 }
