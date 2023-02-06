@@ -10,10 +10,10 @@ import com.sun.net.httpserver.HttpHandler;
 
 import urlshortener.urlshortener.UrlShortener;
 
-public class UrlShortenerHttpHandlerString implements HttpHandler {
-    private UrlShortener<String> urlShortener;
+public class UrlShortenerHttpHandler implements HttpHandler {
+    private UrlShortener urlShortener;
 
-    public UrlShortenerHttpHandlerString(UrlShortener<String> urlShortener){
+    public UrlShortenerHttpHandler(UrlShortener urlShortener){
         this.urlShortener = urlShortener;
     }
 

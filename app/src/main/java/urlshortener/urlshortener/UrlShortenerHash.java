@@ -4,9 +4,12 @@ import java.util.Base64;
 
 import urlshortener.raft.Raft;
 
-public class UrlShortenerHash extends UrlShortener<String> {
-    public UrlShortenerHash(Database<String> db, Raft raft){
-        super(db, raft);
+public class UrlShortenerHash extends UrlShortener {
+    PersistentStateMachine<String> db;
+    
+    public UrlShortenerHash(PersistentStateMachine<String> db, Raft raft){
+        super(raft);
+        this.db = db;
     }
 
     static public String staticShortenURL(String url){
@@ -17,5 +20,17 @@ public class UrlShortenerHash extends UrlShortener<String> {
 
     public String shortenURL(String url){
         return staticShortenURL(url);
+    }
+
+    @Override
+    public String enlongate(String id) {
+        String key = new String(Base64.getDecoder().decode(id.getBytes()));
+        return db.getKeyValue(key);
+    }
+
+    @Override
+    public void commit(String id, String url) {
+        String key = new String(Base64.getDecoder().decode(id.getBytes()));
+        db.putKeyValue(key, url);
     }
 }

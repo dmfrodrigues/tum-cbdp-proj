@@ -2,19 +2,27 @@ package urlshortener.urlshortener;
 
 import urlshortener.raft.Raft;
 
-public class UrlShortenerLong extends UrlShortener<Long> {
-    DatabaseOrdered<Long> db;
+public class UrlShortenerLong extends UrlShortener {
+    PersistentStateMachineOrdered<Long> db;
 
-    Long highestKey;
-
-    public UrlShortenerLong(DatabaseOrdered<Long> db, Raft raft){
-        super(db, raft);
+    public UrlShortenerLong(PersistentStateMachineOrdered<Long> db, Raft raft){
+        super(raft);
         this.db = db;
-
-        highestKey = db.getHighestKey();
     }
 
-    public Long shortenURL(String url){
-        return highestKey++;
+    public String shortenURL(String url){
+        return Long.valueOf(db.getHighestKey()+1).toString();
+    }
+
+    @Override
+    public String enlongate(String id) {
+        Long key = Long.valueOf(id);
+        return db.getKeyValue(key);
+    }
+
+    @Override
+    public void commit(String id, String url) {
+        Long key = Long.valueOf(id);
+        db.putKeyValue(key, url);
     }
 }

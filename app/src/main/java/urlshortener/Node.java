@@ -18,17 +18,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import urlshortener.raft.Raft;
-import urlshortener.server.UrlShortenerHttpHandlerString;
-import urlshortener.urlshortener.Database;
-import urlshortener.urlshortener.DatabasePostgresString;
+import urlshortener.server.UrlShortenerHttpHandler;
+import urlshortener.urlshortener.DatabaseOrdered;
+import urlshortener.urlshortener.DatabasePostgresLong;
 import urlshortener.urlshortener.UrlShortener;
-import urlshortener.urlshortener.UrlShortenerHash;
+import urlshortener.urlshortener.UrlShortenerLong;
 
 import com.sun.net.httpserver.HttpServer;
 
 public class Node {    
-    public Database<String> db;
-    private UrlShortener<String> urlShortener;
+    public DatabaseOrdered<Long> db;
+    public UrlShortener urlShortener;
 
     private Raft raft;
 
@@ -42,13 +42,14 @@ public class Node {
 
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
 
-        DatabasePostgresString databasePostgres = new DatabasePostgresString("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        DatabasePostgresLong databasePostgres = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
         db = databasePostgres;
         db.seed(false);
+        db.init();
         databasePostgres.loadLog();
 
         raft = new Raft(myAddress, db, db);
-        urlShortener = new UrlShortenerHash(db, raft);
+        urlShortener = new UrlShortenerLong(db, raft);
 
         register();
 
@@ -77,7 +78,7 @@ public class Node {
 
     private void server() throws IOException {
         server = HttpServer.create(new InetSocketAddress("0.0.0.0", 8001), 0);
-        server.createContext("/", new UrlShortenerHttpHandlerString(urlShortener));
+        server.createContext("/", new UrlShortenerHttpHandler(urlShortener));
         server.setExecutor(serverThreadPoolExecutor);
         server.start();
 
