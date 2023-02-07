@@ -38,7 +38,7 @@ public class Raft implements RaftRemote {
         return peer;
     }
 
-    static private int RMI_TIMEOUT_MILLIS = 10000;
+    static private int RMI_TIMEOUT_MILLIS = 100;
     static private long LEADER_HEARTBEAT_MILLIS = 500;
     static private long FOLLOWER_TIMEOUT_MIN_MILLIS = 1000;
     static private long FOLLOWER_TIMEOUT_MAX_MILLIS = 2000;
@@ -540,11 +540,11 @@ public class Raft implements RaftRemote {
     }
 
     public void register() throws AlreadyBoundException, IOException {
-        RMISocketFactory.setSocketFactory(new MyRMISocketFactory(RMI_TIMEOUT_MILLIS));
-
         Registry registry = LocateRegistry.getRegistry();
         RaftRemote stub = (RaftRemote) UnicastRemoteObject.exportObject(this, 0);
         registry.bind("raft", stub);
+
+        RMISocketFactory.setSocketFactory(new MyRMISocketFactory(RMI_TIMEOUT_MILLIS));
     }
 
     public void deregister() throws RemoteException, NotBoundException {
