@@ -4,7 +4,7 @@ set -e
 su -c "sh /init_db.sh" -m postgres
 
 cd app/build/classes/java/main && rmiregistry &
-sleep 1
+sleep 10
 
 if [ -z "$LEADER_HOST" ]
 then
