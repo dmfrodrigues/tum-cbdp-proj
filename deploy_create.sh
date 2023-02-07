@@ -17,7 +17,7 @@ az container create -g $RESOURCE_GROUP --vnet cbdpVnet --subnet cbdpSubnet\
   --registry-password=$REG_PWD --registry-username=$REG_USERNAME
 
 LEADER=$(az container show --resource-group $RESOURCE_GROUP --name leader --query ipAddress.ip --output tsv)
-for (( i=1; i<=$1; i++ ))
+for (( i=0; i<$1; i++ ))
 do
   echo Deploying peer $i to leader $LEADER
   az container create -g $RESOURCE_GROUP --vnet cbdpVnet --subnet cbdpSubnet\
