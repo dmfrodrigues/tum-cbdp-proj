@@ -42,7 +42,7 @@ public class Node {
 
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
 
-        DatabasePostgresLong db = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        db = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
         db.seed(false);
         db.init();
 
