@@ -39,9 +39,6 @@ WORKDIR /app
 COPY . .
 RUN mv -f gradle/wrapper/gradle-wrapper.docker.properties gradle/wrapper/gradle-wrapper.properties
 
-RUN mv init_db.sh /init_db.sh
-RUN chmod 777 /init_db.sh
-
 RUN chmod +x *.sh gradlew
 
 EXPOSE 80

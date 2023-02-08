@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.bson.Document;
 import org.bson.types.Binary;
@@ -24,6 +26,8 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
+import com.mongodb.client.result.UpdateResult;
+
 import urlshortener.raft.LogEntry;
 import urlshortener.raft.LogEntryContent;
 
@@ -35,6 +39,9 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
     private Long highestKey;
 
     public DatabaseMongoLong(String uri) {
+        Logger logger = Logger.getLogger("org.mongodb.driver");
+        logger.setLevel(Level.SEVERE);
+
         client = MongoClients.create(uri);
         db = client.getDatabase("urlshortener");
     }
@@ -77,7 +84,7 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
             db.getCollection("kv").drop();
             db.createCollection("kv");
             db.getCollection("kv").createIndex(
-                Indexes.ascending("key")
+                Indexes.hashed("key")
             );
         }
 
@@ -116,8 +123,23 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
         try {
             byte[] valueBytes = new byte[value.available()];
             value.read(valueBytes);
-            Document d = new Document("key", key).append("value", valueBytes);
-            db.getCollection("map").insertOne(d);
+            
+            BasicDBObject query = new BasicDBObject();
+            query.put("key", key);
+
+            BasicDBObject newDocument = new BasicDBObject();
+            newDocument.put("value", valueBytes);
+
+            BasicDBObject updateObject = new BasicDBObject();
+            updateObject.put("$set", newDocument);
+
+            UpdateResult res = db.getCollection("map").updateOne(query, updateObject);
+            
+            if(res.getMatchedCount() == 0){
+                Document d = new Document("key", key).append("value", valueBytes);
+                db.getCollection("map").insertOne(d);
+            }
+
             return true;
         } catch (IOException e) {
             e.printStackTrace();
@@ -137,9 +159,23 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
     }
 
     @Override
-    public boolean putKeyValue(Long key, String value) {
-        Document d = new Document("key", key).append("value", value);
-        db.getCollection("kv").insertOne(d);
+    public boolean putKeyValue(Long key, String value) {        
+        BasicDBObject query = new BasicDBObject();
+        query.put("key", key);
+
+        BasicDBObject newDocument = new BasicDBObject();
+        newDocument.put("value", value);
+
+        BasicDBObject updateObject = new BasicDBObject();
+        updateObject.put("$set", newDocument);
+
+        UpdateResult res = db.getCollection("kv").updateOne(query, updateObject);
+        
+        if(res.getMatchedCount() == 0){
+            Document d = new Document("key", key).append("value", value);
+            db.getCollection("kv").insertOne(d);
+        }
+
         // System.out.println("DB: applied " + key + " => " + value);
         highestKey = Math.max(key, highestKey);
         return true;
