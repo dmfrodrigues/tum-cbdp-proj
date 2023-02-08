@@ -16,6 +16,7 @@ public class DatabaseTest {
     public void testStoredVariables() throws SQLException, IOException {
         DatabaseOrdered<Long> db = new DatabaseMongoLong("mongodb://localhost:27017");
         db.seed();
+        db.init();
 
         // Single variable
         Stored<Integer> i = db.loadStoredVariable("i", 2);

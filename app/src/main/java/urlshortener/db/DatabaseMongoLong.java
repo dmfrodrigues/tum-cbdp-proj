@@ -23,6 +23,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
@@ -37,6 +38,10 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
     private MongoDatabase db;
 
     private Long highestKey;
+
+    private MongoCollection<Document> mapCollection;
+    private MongoCollection<Document> kvCollection;
+    private MongoCollection<Document> logCollection;
 
     public DatabaseMongoLong(String uri) {
         Logger logger = Logger.getLogger("org.mongodb.driver");
@@ -103,8 +108,12 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
 
     @Override
     public boolean init() {
+        mapCollection = db.getCollection("map");
+        kvCollection  = db.getCollection("kv" );
+        logCollection = db.getCollection("log");
+
         // Getting highest key
-        Document d = db.getCollection("kv")
+        Document d = kvCollection
             .find()
             .sort(new BasicDBObject("key", -1))
             .limit(1)
@@ -133,11 +142,11 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
             BasicDBObject updateObject = new BasicDBObject();
             updateObject.put("$set", newDocument);
 
-            UpdateResult res = db.getCollection("map").updateOne(query, updateObject);
+            UpdateResult res = mapCollection.updateOne(query, updateObject);
             
             if(res.getMatchedCount() == 0){
                 Document d = new Document("key", key).append("value", valueBytes);
-                db.getCollection("map").insertOne(d);
+                mapCollection.insertOne(d);
             }
 
             return true;
@@ -149,7 +158,7 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
 
     @Override
     public InputStream get(String key) {
-        Document d = db.getCollection("map")
+        Document d = mapCollection
             .find(eq("key", key))
             .first();
         if(d == null) return null;
@@ -169,11 +178,11 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
         BasicDBObject updateObject = new BasicDBObject();
         updateObject.put("$set", newDocument);
 
-        UpdateResult res = db.getCollection("kv").updateOne(query, updateObject);
+        UpdateResult res = kvCollection.updateOne(query, updateObject);
         
         if(res.getMatchedCount() == 0){
             Document d = new Document("key", key).append("value", value);
-            db.getCollection("kv").insertOne(d);
+            kvCollection.insertOne(d);
         }
 
         // System.out.println("DB: applied " + key + " => " + value);
@@ -183,7 +192,7 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
 
     @Override
     public String getKeyValue(Long key) {
-        Document d = db.getCollection("kv")
+        Document d = kvCollection
             .find(eq("key", key))
             .first();
         if(d == null) return null;
@@ -200,7 +209,7 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
 
     private boolean loadLog() {
         try {
-            FindIterable<Document> rs = db.getCollection("log")
+            FindIterable<Document> rs = logCollection
                 .find()
                 .sort(ascending("id"));
             Iterator<Document> it = rs.iterator();
@@ -240,7 +249,7 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
 
     @Override
     public boolean deleteAfter(int index) {
-        db.getCollection("log")
+        logCollection
             .deleteMany(gte("id", index));
         return true;
     }
@@ -256,7 +265,7 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
             Document d = new Document("id", log.size())
                 .append("term", logEntry.term)
                 .append("content", baos.toByteArray());
-            db.getCollection("log").insertOne(d);
+            logCollection.insertOne(d);
 
             log.add(logEntry);
 
@@ -291,7 +300,7 @@ public class DatabaseMongoLong extends DatabaseOrdered<Long> {
                 documents.add(document);
             }
 
-            db.getCollection("log").insertMany(documents);
+            logCollection.insertMany(documents);
 
             log.addAll(list);
 
