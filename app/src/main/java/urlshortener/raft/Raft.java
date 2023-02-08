@@ -594,10 +594,11 @@ public class Raft implements RaftRemote {
 
         LogEntry logEntry = new LogEntry(currentTerm.get(), logEntryContent);
 
-        log.add(logEntry);
-
-        matchIndex.put(myAddress, log.size());
-        nextIndex.put(myAddress, log.size() + 1);
+        synchronized(log){
+            log.add(logEntry);
+            matchIndex.put(myAddress, log.size());
+            nextIndex.put(myAddress, log.size() + 1);
+        }
 
         loopLeader();
 
