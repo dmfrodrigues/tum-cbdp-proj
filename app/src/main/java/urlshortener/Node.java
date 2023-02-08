@@ -17,14 +17,14 @@ import java.util.Enumeration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import com.sun.net.httpserver.HttpServer;
+
+import urlshortener.db.DatabaseMongoLong;
 import urlshortener.db.DatabaseOrdered;
-import urlshortener.db.DatabasePostgresLong;
 import urlshortener.raft.Raft;
 import urlshortener.server.UrlShortenerHttpHandler;
 import urlshortener.urlshortener.UrlShortener;
 import urlshortener.urlshortener.UrlShortenerLong;
-
-import com.sun.net.httpserver.HttpServer;
 
 public class Node {    
     public DatabaseOrdered<Long> db;
@@ -40,13 +40,9 @@ public class Node {
 
         System.setProperty("java.rmi.server.hostname", myAddress);
 
-        String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
-
-        DatabasePostgresLong databasePostgres = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
-        db = databasePostgres;
+        db = new DatabaseMongoLong("mongodb://localhost:27017");
         db.seed(false);
         db.init();
-        databasePostgres.loadLog();
 
         raft = new Raft(myAddress, db, db);
         urlShortener = new UrlShortenerLong(db, raft);
@@ -73,7 +69,7 @@ public class Node {
             e.printStackTrace();
         } }));
 
-        // System.err.println("Raft registered to RMI registry");
+        System.err.println("Raft registered to RMI registry");
     }
 
     private void server() throws IOException {
