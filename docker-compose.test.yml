@@ -8,4 +8,6 @@ services:
       target: base
     ports:
       - 8001:8001
+    volumes:
+      - ./build:/app/app/build
     command: ["./run.test.sh"]

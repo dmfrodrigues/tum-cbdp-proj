@@ -87,7 +87,7 @@ public class Raft implements RaftRemote {
     //
     ExecutorService executor = Executors.newFixedThreadPool(4);
 
-    public Raft(String myAddress, PersistentMap map, PersistentLog log) throws IOException {
+    public Raft(String myAddress, PersistentMap<String, ?> map, PersistentLog log) throws IOException {
         this.myAddress = myAddress;
         this.leaderAddress = myAddress;
         this.state = State.LEADER;

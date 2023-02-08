@@ -12,7 +12,7 @@ import urlshortener.urlshortener.DatabaseOrdered;
 import urlshortener.urlshortener.DatabasePostgresLong;
 
 public class DatabaseTest {
-    @Test
+    @Test(timeout = 10000)
     public void testStoredVariables() throws SQLException, IOException {
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
         DatabaseOrdered<Long> db = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
