@@ -3,11 +3,12 @@ package urlshortener.utils;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Timer {
     TimeUnit unit;
     long t1;
-    ReadWriteLock rwLock;
+    ReadWriteLock rwLock = new ReentrantReadWriteLock();
     public Timer(TimeUnit unit){
         this.unit = unit;
         tic();
