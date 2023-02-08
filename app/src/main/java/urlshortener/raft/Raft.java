@@ -28,7 +28,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import urlshortener.Utils;
-import urlshortener.raft.PersistentMap.Stored;
+import urlshortener.db.PersistentLog;
+import urlshortener.db.PersistentMap;
+import urlshortener.db.PersistentMap.Stored;
 import urlshortener.rmi.MyRMISocketFactory;
 
 public class Raft implements RaftRemote {
@@ -67,8 +69,6 @@ public class Raft implements RaftRemote {
     ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(1);
 
     // Persistent state
-    // TODO: all the persistent state variables must be stored in secondary
-    // memory
     Stored<Integer> currentTerm;
     Stored<String> votedFor;
     PersistentLog log;
@@ -87,7 +87,7 @@ public class Raft implements RaftRemote {
     //
     ExecutorService executor = Executors.newFixedThreadPool(4);
 
-    public Raft(String myAddress, PersistentMap map, PersistentLog log) throws IOException {
+    public Raft(String myAddress, PersistentMap<String, ?> map, PersistentLog log) throws IOException {
         this.myAddress = myAddress;
         this.leaderAddress = myAddress;
         this.state = State.LEADER;
@@ -516,6 +516,8 @@ public class Raft implements RaftRemote {
             }
 
             members.removeAll(abortedMembers);
+
+            if(state != State.CANDIDATE) return 0;
 
             if (numberVotes >= members.size() / 2 + 1) {
                 becomeLeader();

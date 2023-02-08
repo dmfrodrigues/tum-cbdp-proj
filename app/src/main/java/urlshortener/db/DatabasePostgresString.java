@@ -1,10 +1,13 @@
-package urlshortener.urlshortener;
+package urlshortener.db;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -125,10 +128,10 @@ public class DatabasePostgresString extends Database<String> {
         }
     }
 
-    public boolean put(String key, String value) {
+    public boolean put(String key, InputStream value) {
         try {
             putStmt.setString(1, key);
-            putStmt.setString(2, value);
+            putStmt.setBinaryStream(2, value);
             int n = putStmt.executeUpdate();
             // System.out.println("DB: applied " + key + " => " + value);
             return (n == 1);
@@ -139,13 +142,13 @@ public class DatabasePostgresString extends Database<String> {
         }
     }
 
-    public String get(String key) {
+    public InputStream get(String key) {
         try {
             getStmt.setString(1, key);
             ResultSet rs = getStmt.executeQuery();
             if(!rs.next()) return null;
-            String url = rs.getString("value");
-            return url;
+            InputStream value = rs.getBinaryStream("value");
+            return value;
         } catch(SQLException e){
             e.printStackTrace();
             return null;
@@ -155,12 +158,34 @@ public class DatabasePostgresString extends Database<String> {
     
     @Override
     public boolean putKeyValue(String key, String value) {
-        return put(key, value);
+        try {
+            PipedOutputStream pos = new PipedOutputStream();
+            PipedInputStream pis = new PipedInputStream(pos);
+            ObjectOutputStream oos = new ObjectOutputStream(pos);
+            oos.writeObject(value);
+            return put(key, pis);
+        } catch(IOException e){
+            return false;
+        }
     }
 
     @Override
     public String getKeyValue(String key) {
-        return get(key);
+        InputStream is = get(key);
+        if(is == null){
+            return null;
+        }
+
+        try {
+            ObjectInputStream ois = new ObjectInputStream(is);
+            Object obj = ois.readObject();
+            String value = (String)obj;
+            return value;
+        } catch (ClassNotFoundException e) {
+            throw new ClassCastException(e.getMessage());
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     ArrayList<LogEntry> log = new ArrayList<>();

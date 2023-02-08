@@ -3,6 +3,7 @@ package urlshortener.urlshortener;
 import java.io.IOException;
 import java.rmi.NotBoundException;
 
+import urlshortener.db.LogEntryContentPut;
 import urlshortener.raft.Raft;
 
 public abstract class UrlShortener {

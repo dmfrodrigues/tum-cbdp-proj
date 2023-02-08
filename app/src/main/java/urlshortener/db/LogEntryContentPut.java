@@ -1,4 +1,4 @@
-package urlshortener.urlshortener;
+package urlshortener.db;
 
 import urlshortener.App;
 import urlshortener.raft.LogEntryContent;

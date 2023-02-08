@@ -3,6 +3,7 @@ package urlshortener.urlshortener;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 
+import urlshortener.db.PersistentStateMachineOrdered;
 import urlshortener.raft.Raft;
 
 public class UrlShortenerLong extends UrlShortener {

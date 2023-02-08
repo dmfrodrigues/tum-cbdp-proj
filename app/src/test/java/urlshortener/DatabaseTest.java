@@ -7,12 +7,12 @@ import java.sql.SQLException;
 
 import org.junit.Test;
 
-import urlshortener.raft.PersistentMap.Stored;
-import urlshortener.urlshortener.DatabaseOrdered;
-import urlshortener.urlshortener.DatabasePostgresLong;
+import urlshortener.db.DatabaseOrdered;
+import urlshortener.db.DatabasePostgresLong;
+import urlshortener.db.PersistentMap.Stored;
 
 public class DatabaseTest {
-    @Test
+    @Test(timeout = 10000)
     public void testStoredVariables() throws SQLException, IOException {
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
         DatabaseOrdered<Long> db = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);

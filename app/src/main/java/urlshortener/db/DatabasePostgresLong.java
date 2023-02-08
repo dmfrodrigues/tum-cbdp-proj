@@ -1,8 +1,9 @@
-package urlshortener.urlshortener;
+package urlshortener.db;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.sql.Connection;
@@ -119,7 +120,7 @@ public class DatabasePostgresLong extends DatabaseOrdered<Long> {
 
                 CREATE TABLE map(
                     key VARCHAR PRIMARY KEY,
-                    value VARCHAR
+                    value BYTEA
                 );
 
                 CREATE TABLE kv(
@@ -164,10 +165,10 @@ public class DatabasePostgresLong extends DatabaseOrdered<Long> {
         }
     }
 
-    public boolean put(String key, String value) {
+    public boolean put(String key, InputStream value) {
         try {
             putStmt.setString(1, key);
-            putStmt.setString(2, value);
+            putStmt.setBinaryStream(2, value);
             int n = putStmt.executeUpdate();
             // System.out.println("DB: applied " + key + " => " + value);
             return (n == 1);
@@ -178,13 +179,13 @@ public class DatabasePostgresLong extends DatabaseOrdered<Long> {
         }
     }
 
-    public String get(String key) {
+    public InputStream get(String key) {
         try {
             getStmt.setString(1, key);
             ResultSet rs = getStmt.executeQuery();
             if(!rs.next()) return null;
-            String url = rs.getString("value");
-            return url;
+            InputStream value = rs.getBinaryStream("value");
+            return value;
         } catch(SQLException e){
             e.printStackTrace();
             return null;

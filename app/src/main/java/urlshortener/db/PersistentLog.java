@@ -1,6 +1,8 @@
-package urlshortener.raft;
+package urlshortener.db;
 
 import java.util.List;
+
+import urlshortener.raft.LogEntry;
 
 public interface PersistentLog {
     /**
