@@ -20,11 +20,9 @@ dependencies {
     // Use JUnit test framework.
     testImplementation 'junit:junit:4.13.2'
 
-    // This dependency is used by the application.
-    implementation 'com.google.guava:guava:30.1.1-jre'
-
     // Postgresql driver
     implementation group: 'org.postgresql', name: 'postgresql', version: '42.3.3'
+    implementation group: 'org.mongodb', name: 'mongo-java-driver', version: '3.12.11'
 }
 
 application {

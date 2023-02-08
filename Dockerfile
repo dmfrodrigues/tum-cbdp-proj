@@ -2,6 +2,9 @@ FROM amazoncorretto:17-alpine AS base
 
 ENV POSTGRES_PASSWORD=1234
 
+RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.6/main' >> /etc/apk/repositories
+RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.6/community' >> /etc/apk/repositories
+
 RUN apk update
 RUN apk --no-cache add \
     curl \
@@ -26,20 +29,7 @@ RUN chmod 0700 /var/lib/postgresql/data
 
 # Set up MongoDB database
 RUN mkdir -p /data/db/
-RUN chown `root` /data/db
-
-# Enable and start MongoDB service on Alpine
-RUN rc-update add mongodb default
-RUN rc-service mongodb start
-
-USER postgres
-## Initialize DB
-RUN initdb -D /var/lib/postgresql/data
-## Allow external connections
-RUN echo "host all  all    0.0.0.0/0  md5" >> /var/lib/postgresql/data/pg_hba.conf
-RUN echo "listen_addresses='*'" >> /var/lib/postgresql/data/postgresql.conf
-## Done with initializing DB
-USER root
+RUN chown 'root' /data/db
 
 # Copy app to image
 

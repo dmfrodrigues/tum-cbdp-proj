@@ -1,7 +1,8 @@
 #!/bin/sh
 set -e
 
-su -c "sh /init_db.sh" -m postgres
+# Start MongoDB
+mongod --dbpath /data/db &
 
 cd app/build/classes/java/main && rmiregistry &
 sleep 10
