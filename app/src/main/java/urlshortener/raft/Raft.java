@@ -24,7 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -34,6 +34,7 @@ import urlshortener.db.PersistentLog;
 import urlshortener.db.PersistentMap;
 import urlshortener.db.PersistentMap.Stored;
 import urlshortener.rmi.MyRMISocketFactory;
+import urlshortener.utils.Timer;
 
 public class Raft implements RaftRemote {
     private Logger logger = LogManager.getLogger(Raft.class);
@@ -85,8 +86,7 @@ public class Raft implements RaftRemote {
     Map<String, Integer> matchIndex = null;
 
     // Volatile state on followers
-    AtomicLong heartbeatTimestampNanos = new AtomicLong(System.currentTimeMillis());
-
+    Timer heartbeatTimer = new Timer(TimeUnit.MILLISECONDS);
     //
     ExecutorService executor = Executors.newFixedThreadPool(4);
 
@@ -151,7 +151,7 @@ public class Raft implements RaftRemote {
 
             startMembersGossip();
 
-            heartbeatTimestampNanos.set(System.nanoTime());
+            heartbeatTimer.tic();
         }
     }
 
@@ -304,7 +304,7 @@ public class Raft implements RaftRemote {
         }
 
         // System.out.println("Updated heartbeat timestamp");
-        heartbeatTimestampNanos.set(System.nanoTime());
+        heartbeatTimer.tic();
 
         return new RaftResponse<Boolean>(currentTerm.get(), true);
     }
@@ -323,7 +323,7 @@ public class Raft implements RaftRemote {
                 candidateLogIsAtLeastAsUpToDateAsReceiverLog) {
             votedFor.set(candidateAddress);
             logger.info("Candidate " + candidateAddress + " asked me to vote for term " + term + ", I said YES");
-            heartbeatTimestampNanos.set(System.nanoTime());
+            heartbeatTimer.tic();
             return new RaftResponse<Boolean>(currentTerm.get(), true);
         }
 
@@ -358,12 +358,14 @@ public class Raft implements RaftRemote {
                         break;
                 }
             }
-            Thread.sleep(sleep);
+            TimeUnit.MILLISECONDS.sleep(sleep);
         }
     }
 
     private long loopLeader() throws InterruptedException, NotBoundException, IOException {
-        long tBeginNanos = System.nanoTime();
+        Timer timer = new Timer(TimeUnit.MILLISECONDS);
+        timer.tic();
+
         synchronized (members) {
 
             // System.out.println("Sending heartbeat");
@@ -407,10 +409,8 @@ public class Raft implements RaftRemote {
                 loopLeader();
             }
         }
-        long tEndNanos = System.nanoTime();
-        long elapsedMillis = (tEndNanos - tBeginNanos) / 1000000;
-        long sleep = LEADER_HEARTBEAT_MILLIS - elapsedMillis;
-        return sleep;
+
+        return LEADER_HEARTBEAT_MILLIS - timer.toc();
     }
 
     private void heartbeatPeer(RaftRemote peer, String peerAddress) throws IOException {
@@ -436,11 +436,8 @@ public class Raft implements RaftRemote {
     }
 
     private long loopFollower() throws InterruptedException {
-        long nowMillis = System.nanoTime() / 1000000;
-        long heartbeatTimestampMillis = heartbeatTimestampNanos.get() / 1000000;
-        long elapsedMillis = nowMillis - heartbeatTimestampMillis;
-        // System.out.println("Elapsed: " + elapsedMillis);
-        if (elapsedMillis > FOLLOWER_TIMEOUT_MILLIS) {
+        // System.out.println("Elapsed: " + heartbeatTimer.toc());
+        if (heartbeatTimer.toc() > FOLLOWER_TIMEOUT_MILLIS) {
             logger.info("Suspect leader is dead, I am now a candidate");
             synchronized (members) {
                 members.remove(leaderAddress);
@@ -449,15 +446,13 @@ public class Raft implements RaftRemote {
             return 0;
         }
 
-        long sleepUntilMillis = heartbeatTimestampMillis + FOLLOWER_TIMEOUT_MILLIS;
-        nowMillis = System.nanoTime() / 1000000;
-        long delta = Math.max(sleepUntilMillis - nowMillis, FOLLOWER_SLEEP_MILLIS);
+        long delta = Math.max(FOLLOWER_TIMEOUT_MILLIS - heartbeatTimer.toc(), FOLLOWER_SLEEP_MILLIS);
         return delta;
     }
 
     // Start election
     private long loopCandidate() throws NotBoundException, ServerNotActiveException, IOException {
-        long tBeginNanos = System.nanoTime();
+        Timer timer = new Timer(TimeUnit.MILLISECONDS);
 
         currentTerm.set(currentTerm.get() + 1);
         votedFor.set(myAddress);
@@ -475,6 +470,13 @@ public class Raft implements RaftRemote {
             int numberVotes = 1;
 
             Set<String> abortedMembers = new HashSet<>();
+            /**
+             * These futures complete with:
+             * - True, if the candidate got a vote
+             * - False, if the candidate did not get a vote
+             * - null, if the system is already in a term that is greater than
+             *   that of the candidate. So the candidate has to step down.
+             */
             List<CompletableFuture<Boolean>> futures = members
                     .stream()
                     .map((String peerAddress) -> {
@@ -489,8 +491,10 @@ public class Raft implements RaftRemote {
                                 if (response.get()) {
                                     logger.info("Got vote from " + peerAddress);
                                 }
-                                // TODO: do something with the term in the response
-                                future.complete(response.get());
+                                Boolean ret = response.get();
+                                if(response.term() > currentTerm.get())
+                                    ret = null;
+                                future.complete(ret);
                             } catch (ConnectIOException e) {
                                 System.err.println("Peer " + peerAddress + " not working");
                                 synchronized (abortedMembers) {
@@ -507,28 +511,33 @@ public class Raft implements RaftRemote {
             while (futures.size() > 0 && numberVotes < members.size() / 2 + 1) {
                 CompletableFuture<Object> anyFuture = CompletableFuture.anyOf(
                         futures.toArray(new CompletableFuture[futures.size()]));
+
+                long sleep = FOLLOWER_TIMEOUT_MILLIS - timer.toc();
                 try {
-                    Boolean b = (Boolean) anyFuture.get();
+                    Boolean b = (Boolean) anyFuture.get(sleep, TimeUnit.MILLISECONDS);
+                    if(b == null){
+                        return FOLLOWER_TIMEOUT_MILLIS - timer.toc();
+                    }
                     numberVotes += (b ? 1 : 0);
                 } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                     continue;
+                } catch (TimeoutException e) {
+                    System.out.println("Election timed out");
+                    break;
                 }
             }
 
             members.removeAll(abortedMembers);
 
-            if(state != State.CANDIDATE) return 0;
-
             if (numberVotes >= members.size() / 2 + 1) {
                 becomeLeader();
+                return 0;
             }
         }
 
-        long tEndNanos = System.nanoTime();
-        long elapsedMillis = (tEndNanos - tBeginNanos) / 1000000;
-        long sleep = FOLLOWER_TIMEOUT_MILLIS - elapsedMillis;
-        return sleep;
+        // Did not get enough votes
+        return FOLLOWER_TIMEOUT_MILLIS - timer.toc();
     }
 
     private void becomeLeader() {
