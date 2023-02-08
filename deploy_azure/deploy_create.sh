@@ -1,14 +1,14 @@
 #!/bin/bash
 
-set -x
-
 if [ $# -eq 0 ] || [ $1 -lt 0 ]
 then
   echo "Usage: ./deploy.sh num_peers(min 0 peer)"
   exit 1
 fi
 
-export $(grep -v '^#' .env | xargs)
+export $(grep -v '^#' ./.env | xargs)
+
+set -x
 
 echo Deploying leader
 az container create -g $RESOURCE_GROUP --vnet cbdpVnet --subnet cbdpSubnet\
