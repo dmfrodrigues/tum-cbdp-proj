@@ -545,7 +545,7 @@ public class Raft implements RaftRemote {
 
     private void becomeLeader() {
         state = State.LEADER;
-        logger.info("Became leader for term " + currentTerm);
+        logger.info("Became leader for term " + currentTerm.get());
         nextIndex = new HashMap<>();
         matchIndex = new HashMap<>();
         for (String peerAddr : members) {

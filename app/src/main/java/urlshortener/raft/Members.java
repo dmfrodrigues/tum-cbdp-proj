@@ -2,6 +2,7 @@ package urlshortener.raft;
 
 import java.net.SocketTimeoutException;
 import java.rmi.ConnectIOException;
+import java.rmi.ConnectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.HashSet;
@@ -47,7 +48,7 @@ public class Members extends HashSet<String> {
             String address = it.next();
             try {
                 Raft.connect(address);
-            } catch (ConnectIOException e) {
+            } catch (ConnectIOException | ConnectException e) {
                 System.err.println("Peer " + address + " not working");
                 it.remove();
             } catch (RemoteException | NotBoundException e) {
@@ -63,7 +64,7 @@ public class Members extends HashSet<String> {
             try {
                 RaftRemote peer = Raft.connect(address);
                 f.apply(address, peer);
-            } catch (ConnectIOException e) {
+            } catch (ConnectIOException | ConnectException e) {
                 System.err.println("Peer " + address + " not working");
                 it.remove();
             }
