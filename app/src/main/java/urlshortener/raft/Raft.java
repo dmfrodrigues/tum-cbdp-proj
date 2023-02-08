@@ -316,7 +316,25 @@ public class Raft implements RaftRemote {
         if (term < currentTerm.get())
             return new RaftResponse<Boolean>(currentTerm.get(), false);
 
-        boolean candidateLogIsAtLeastAsUpToDateAsReceiverLog = true; // TODO
+        /**
+         * Check if candidate log is at least as up-to-date as calee log.
+         * This is done according to the last paragraph of $5.4.1 of the Raft
+         * article:
+         * - If the last log entry of A has a greater term than the last log
+         *   entry of B, then A is more up-to-date.
+         * - If the term of the last log entries are tied, then the peer with
+         *   the longest log has a more up-to-date log.
+         */
+        boolean candidateLogIsAtLeastAsUpToDateAsReceiverLog = true;
+        int myLastLogIndex = log.size()-1;
+        int myLastLogTerm = log.get(myLastLogIndex).term;
+        if(
+            lastLogTerm < myLastLogTerm ||
+            (
+                lastLogTerm == myLastLogTerm &&
+                lastLogIndex < myLastLogIndex
+            )
+        ) candidateLogIsAtLeastAsUpToDateAsReceiverLog = false;
 
         if ((votedFor.get() == null || candidateAddress.equals(votedFor.get())) &&
                 candidateLogIsAtLeastAsUpToDateAsReceiverLog) {
