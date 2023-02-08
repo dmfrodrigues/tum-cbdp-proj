@@ -69,7 +69,7 @@ public class Node {
             e.printStackTrace();
         } }));
 
-        // System.err.println("Raft registered to RMI registry");
+        System.err.println("Raft registered to RMI registry");
     }
 
     private void server() throws IOException {

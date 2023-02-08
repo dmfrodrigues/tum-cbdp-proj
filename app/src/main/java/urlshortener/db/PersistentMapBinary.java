@@ -38,7 +38,7 @@ public abstract class PersistentMapBinary<Key> extends PersistentMap<Key, InputS
             PipedInputStream pis = new PipedInputStream(pos);
             ObjectOutputStream oos = new ObjectOutputStream(pos);
             oos.writeObject(this.t);
-            oos.flush();
+            oos.close();
             if(!map.put(varName, pis)){
                 throw new IOException("Could not put variable " + varName);
             }
