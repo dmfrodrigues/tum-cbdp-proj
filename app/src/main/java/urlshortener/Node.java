@@ -43,10 +43,8 @@ public class Node {
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
 
         DatabasePostgresLong databasePostgres = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
-        db = databasePostgres;
         db.seed(false);
         db.init();
-        databasePostgres.loadLog();
 
         raft = new Raft(myAddress, db, db);
         urlShortener = new UrlShortenerLong(db, raft);
