@@ -158,6 +158,10 @@ public class DatabasePostgresLong extends DatabaseOrdered<Long> {
             if(!rs.next()) return false;
             highestKey = rs.getLong("maxKey");
             st.close();
+
+            // Load log
+            loadLog();
+
             return true;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -232,7 +236,7 @@ public class DatabasePostgresLong extends DatabaseOrdered<Long> {
 
     ArrayList<LogEntry> log = new ArrayList<>();
 
-    public boolean loadLog(){
+    private boolean loadLog(){
         try {
             log.clear();
 
