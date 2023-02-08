@@ -16,6 +16,7 @@ echo Starting leader
 az container start -g $RESOURCE_GROUP --name leader
 
 # Wait for a bit wile leader gets ready
+LEADER=$(az container show --resource-group $RESOURCE_GROUP --name leader --query ipAddress.ip --output tsv)
 sleep 5
 
 echo Starting instances

@@ -36,7 +36,6 @@ class AzureDeployment:
     def upload_test_images(self, test_name):
         self.run_script("deploy_push_test_image.sh", [
                         TEST_SCRIPTS_DIR, test_name])
-        print("DEPLOYED TESTS")
 
     def deploy(self, n_peers, create_network=True):
         if create_network:
@@ -61,10 +60,13 @@ class AzureDeployment:
             print("Starting test...")
             self.run_script("deploy_start_test.sh")
 
+    def stop_node(self, node):
+        self.run_script("deploy_stop.sh", [node])
+
     def stop(self):
-        self.run_script("deploy_stop.sh", ["leader"])
+        self.stop_node("leader")
         for i in range(len(self.peers)):
-            self.run_script("deploy_stop.sh", ["peer{}".format(i)])
+            self.stop_node("peer{}".format(i))
 
     def __str__(self) -> str:
         return "Leader: {}\nPeers: {}".format(self.leader, self.peers)
@@ -80,7 +82,7 @@ if __name__ == "__main__":
     publish_test_image = azure_deployment.check_if_tests_changed()
     if publish_test_image:
         print("Test code changed, publishing images...")
-        azure_deployment.upload_test_images("echo.sh")
+        azure_deployment.upload_test_images("echo.py")
 
     # azure_deployment.deploy(2, create_network=publish_app_image)
     print("Waiting for network to start...")
