@@ -2,6 +2,7 @@ package urlshortener.urlshortener;
 
 import java.util.Base64;
 
+import urlshortener.db.PersistentStateMachine;
 import urlshortener.raft.Raft;
 
 public class UrlShortenerHash extends UrlShortener {

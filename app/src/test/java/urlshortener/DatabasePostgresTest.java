@@ -8,8 +8,8 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import urlshortener.urlshortener.DatabaseOrdered;
-import urlshortener.urlshortener.DatabasePostgresLong;
+import urlshortener.db.DatabaseOrdered;
+import urlshortener.db.DatabasePostgresLong;
 
 public class DatabasePostgresTest {
     @Test

@@ -1,4 +1,4 @@
-package urlshortener.raft;
+package urlshortener.db;
 
 import java.io.IOException;
 import java.io.Serializable;

@@ -17,10 +17,10 @@ import java.util.Enumeration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import urlshortener.db.DatabaseOrdered;
+import urlshortener.db.DatabasePostgresLong;
 import urlshortener.raft.Raft;
 import urlshortener.server.UrlShortenerHttpHandler;
-import urlshortener.urlshortener.DatabaseOrdered;
-import urlshortener.urlshortener.DatabasePostgresLong;
 import urlshortener.urlshortener.UrlShortener;
 import urlshortener.urlshortener.UrlShortenerLong;
 

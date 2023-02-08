@@ -1,4 +1,4 @@
-package urlshortener.urlshortener;
+package urlshortener.db;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
