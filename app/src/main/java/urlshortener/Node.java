@@ -42,7 +42,7 @@ public class Node {
 
         String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
 
-        DatabasePostgresLong databasePostgres = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        DatabasePostgresLong db = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
         db.seed(false);
         db.init();
 
@@ -71,7 +71,7 @@ public class Node {
             e.printStackTrace();
         } }));
 
-        // System.err.println("Raft registered to RMI registry");
+        System.err.println("Raft registered to RMI registry");
     }
 
     private void server() throws IOException {

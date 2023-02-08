@@ -1,7 +1,5 @@
 package urlshortener.db;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -15,7 +13,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 import urlshortener.raft.LogEntry;
@@ -199,11 +196,12 @@ public class DatabasePostgresString extends Database<String> {
                 int id = rs.getInt("id");
                 int term = rs.getInt("term");
 
-                String s = rs.getString("content");
-                byte[] data = Base64.getDecoder().decode(s);
-                ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
+                InputStream is = rs.getBinaryStream("content");
+                assert(is != null);
+                ObjectInputStream ois = new ObjectInputStream(is);
                 Object obj = ois.readObject();
                 LogEntryContent content = (LogEntryContent)obj;
+                ois.close();
 
                 if(id != log.size()) return false;
 
@@ -248,11 +246,12 @@ public class DatabasePostgresString extends Database<String> {
             logAddStmt.setInt(1, log.size());
             logAddStmt.setInt(2, logEntry.term);
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            PipedOutputStream pos = new PipedOutputStream();
+            PipedInputStream pis = new PipedInputStream(pos);
+            ObjectOutputStream oos = new ObjectOutputStream(pos);
             oos.writeObject(logEntry.content);
-            String s = Base64.getEncoder().encodeToString(baos.toByteArray());
-            logAddStmt.setString(3, s);
+            oos.close();
+            logAddStmt.setBinaryStream(3, pis);
 
             logAddStmt.executeUpdate();
 
@@ -276,11 +275,12 @@ public class DatabasePostgresString extends Database<String> {
                 logAddStmt.setInt(1, j);
                 logAddStmt.setInt(2, logEntry.term);
 
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(baos);
+                PipedOutputStream pos = new PipedOutputStream();
+                PipedInputStream pis = new PipedInputStream(pos);
+                ObjectOutputStream oos = new ObjectOutputStream(pos);
                 oos.writeObject(logEntry.content);
-                String s = Base64.getEncoder().encodeToString(baos.toByteArray());
-                logAddStmt.setString(3, s);
+                oos.close();
+                logAddStmt.setBinaryStream(3, pis);
 
                 logAddStmt.addBatch();
             }
