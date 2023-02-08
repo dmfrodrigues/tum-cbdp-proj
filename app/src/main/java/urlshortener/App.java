@@ -1,30 +1,5 @@
 package urlshortener;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.rmi.AlreadyBoundException;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
-import java.sql.SQLException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
-
-import com.sun.net.httpserver.HttpServer;
-
-import urlshortener.raft.Raft;
-import urlshortener.raft.RaftRemote;
-import urlshortener.server.UrlShortenerHttpHandler;
-import urlshortener.urlshortener.Database;
-import urlshortener.urlshortener.DatabaseMongo;
-import urlshortener.urlshortener.DatabasePostgres;
-import urlshortener.urlshortener.UrlShortener;
-import urlshortener.urlshortener.UrlShortenerHash;
-
 public class App {
 
     public static Node node;
@@ -44,59 +19,5 @@ public class App {
             e.printStackTrace();
             return;
         }
-    }
-
-    private static void createUrlShortener() throws Exception {
-        // String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
-        // db = new DatabasePostgres("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
-        db = new DatabaseMongo();
-
-        System.out.println("Database connected");
-
-        db.seed();
-
-        urlShortener = new UrlShortenerHash(db);
-
-        System.out.println("URL shortener created");
-    }
-
-    private static void register() throws AlreadyBoundException, IOException{
-        register(Registry.REGISTRY_PORT);
-    }
-
-    private static void register(int port) throws AlreadyBoundException, IOException {
-        // Instantiating the implementation class
-        String myAddress = InetAddress.getLocalHost().getHostAddress();
-        raft = new Raft(myAddress);
-        node = new Node(raft);
-
-        // Exporting the object of implementation class
-        // (here we are exporting the remote object to the stub)
-        RaftRemote stub = (RaftRemote) UnicastRemoteObject.exportObject(raft, 0);
-
-        // Binding the remote object (stub) in the registry
-        Registry registry = LocateRegistry.getRegistry();
-
-        registry.bind("raft", stub);
-
-        File file = new File("/tmp/registered");
-        file.createNewFile();
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> { try {
-            registry.unbind("raft");
-        } catch (RemoteException | NotBoundException e) {
-            e.printStackTrace();
-        } }));
-
-        System.err.println("Raft registered to RMI registry");
-    }
-
-    private static void server() throws IOException {
-        server = HttpServer.create(new InetSocketAddress("0.0.0.0", 8001), 0);
-        server.createContext("/", new UrlShortenerHttpHandler(urlShortener));
-        server.setExecutor(serverThreadPoolExecutor);
-        server.start();
-
-        System.err.println("Server running");
     }
 }
