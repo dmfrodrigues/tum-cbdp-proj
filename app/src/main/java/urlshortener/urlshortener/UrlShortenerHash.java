@@ -16,13 +16,8 @@ public class UrlShortenerHash extends UrlShortener {
     static public String staticShortenURL(String url){
         Integer hash = url.hashCode();
         String hashString = hash.toString();
-        String id = new String(Base64.getEncoder().encode(hashString.getBytes()));
-
-        try {
-            db.put(id, url);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        return new String(Base64.getEncoder().encode(hashString.getBytes()));
+    }
 
     public String shortenURL(String url){
         return staticShortenURL(url);
@@ -30,11 +25,13 @@ public class UrlShortenerHash extends UrlShortener {
 
     @Override
     public String enlongate(String id) {
-        try {
-            return db.get(id);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        String key = new String(Base64.getDecoder().decode(id.getBytes()));
+        return db.getKeyValue(key);
+    }
+
+    @Override
+    public void commit(String id, String url) {
+        String key = new String(Base64.getDecoder().decode(id.getBytes()));
+        db.putKeyValue(key, url);
     }
 }
