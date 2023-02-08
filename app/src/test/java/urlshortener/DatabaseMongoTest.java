@@ -1,23 +1,37 @@
 package urlshortener;
 
 
-import java.sql.SQLException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 import org.junit.Test;
 
+import urlshortener.db.DatabaseMongoLong;
 import urlshortener.db.DatabaseOrdered;
-import urlshortener.db.DatabasePostgresLong;
 
-public class DatabasePostgresTest {
+public class DatabaseMongoTest {
     @Test
-    public void testPutGet() throws SQLException {
+    public void testPutGetSmall() {
+        DatabaseOrdered<Long> db = new DatabaseMongoLong("mongodb://localhost:27017");
+        db.seed();
+        db.init();
+
+        assertTrue(db.putKeyValue(1L, "a"));
+        assertEquals("a", db.getKeyValue(1L));
+
+        assertTrue(db.putKeyValue(1L, "b"));
+        assertEquals("b", db.getKeyValue(1L));
+    }
+
+    @Test
+    public void testPutGet() {
         Random random = new Random(0);
 
-        String POSTGRES_PASSWORD = System.getenv("POSTGRES_PASSWORD");
-        DatabaseOrdered<Long> db = new DatabasePostgresLong("jdbc:postgresql://localhost:5432/postgres", "postgres", POSTGRES_PASSWORD);
+        DatabaseOrdered<Long> db = new DatabaseMongoLong("mongodb://localhost:27017");
         db.seed();
         db.init();
 
