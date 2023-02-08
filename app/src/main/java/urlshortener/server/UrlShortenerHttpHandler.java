@@ -8,10 +8,13 @@ import java.util.Scanner;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import urlshortener.urlshortener.UrlShortener;
 
 public class UrlShortenerHttpHandler implements HttpHandler {
     private UrlShortener urlShortener;
+    private static Logger logger = LogManager.getLogger(UrlShortenerHttpHandler.class.getName());
 
     public UrlShortenerHttpHandler(UrlShortener urlShortener){
         this.urlShortener = urlShortener;
@@ -56,6 +59,9 @@ public class UrlShortenerHttpHandler implements HttpHandler {
 
                     break;
                 }
+                case "DELETE":
+                    logger.info("Shutting down");
+                    System.exit(1);
                 default:
                     httpExchange.sendResponseHeaders(405, 0);
                     break;

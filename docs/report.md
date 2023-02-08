@@ -36,7 +36,8 @@ In practice, the average election time since a node detects a leader failure for
 
 ### Measure the impact of election timeouts. Investigate what happens when it gets too short / too long.
 
-TODO
+Measurements show that a timeout between $T_{min} = 100\text{ms}$ and $T_{max} = 4000\text{ms}$ is has an average election time of 60ms.
+A timeout between $T_{min} = 50\text{ms}$ and $T_{max} = 200\text{ms}$ has an average election time of 10ms. And a timeout between $T_{min} = 3000\text{ms}$ and $T_{max} = 4000\text{ms}$ has an average election time of 70ms.
 
 ## Analyze the load of your nodes:
 
@@ -82,4 +83,4 @@ TODO
 
 ### Measure the system performance with more nodes
 
-TODO
+Due to Azure limitations, we could only 

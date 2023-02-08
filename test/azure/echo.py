@@ -8,4 +8,4 @@ if len(argv) != 2:
 
 
 if __name__ == "__main__":
-    print("This is a test !! " + argv[1].split().join("-"))
+    print("This is a test !! " + "-".join(argv[1].split()))

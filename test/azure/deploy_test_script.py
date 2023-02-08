@@ -21,7 +21,7 @@ if publish_test_image:
     print("Test code changed, publishing images...")
     azure_deployment.upload_test_images(argv[1], argv[2])
 
-nPeers = 4
+nPeers = 1
 print("Deploying network with {} peers...".format(nPeers))
 azure_deployment.deploy(nPeers, create_network=publish_app_image)
 print("Waiting for network to start...")
