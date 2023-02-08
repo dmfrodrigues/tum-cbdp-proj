@@ -30,7 +30,7 @@ def waitUntilHealthy(container):
 def spinUpCluster(numberPeers: int):
     scale = numberPeers-1
     print("Spin up cluster")
-    assert(os.system(f"docker-compose up --build -d --scale peer={scale}") == 0)
+    assert(os.system(f"docker-compose -f docker-compose.test.e2e.yml up --build -d --scale peer={scale}") == 0)
     print("Detached from cluster")
     containers = getContainers()
     for container in containers:
@@ -39,7 +39,7 @@ def spinUpCluster(numberPeers: int):
     return containers, client.containers.get('url-shortener_leader')
 
 def killCluster():
-    assert(os.system("docker-compose down") == 0)
+    assert(os.system("docker-compose -f docker-compose.test.e2e.yml down --remove-orphans") == 0)
 
 def getAddress(container):
     host = container.attrs["NetworkSettings"]["Ports"]["8001/tcp"][0]
