@@ -33,7 +33,7 @@ class AzureDeployment:
     def upload_app_images(self):
         self.run_script("deploy_push_app_image.sh", [])
 
-    def upload_test_images(self, test_name):
+    def upload_test_images(self, test_name, test_args=""):
         self.run_script("deploy_push_test_image.sh", [
                         TEST_SCRIPTS_DIR, test_name])
 

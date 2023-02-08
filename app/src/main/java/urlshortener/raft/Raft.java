@@ -38,6 +38,7 @@ import urlshortener.utils.Timer;
 
 public class Raft implements RaftRemote {
     private Logger logger = LogManager.getLogger(Raft.class.getName());
+
     public static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
         Registry peerRegistry = LocateRegistry.getRegistry(peerAddress);
         RaftRemote peer = (RaftRemote) peerRegistry.lookup("raft");
@@ -150,7 +151,8 @@ public class Raft implements RaftRemote {
             matchIndex = null;
 
             members = leader.joinRPC();
-            logger.info("Joined leader at " + leaderAddress + ", got list of members: [" + String.join(", ", members) + "]");
+            logger.info("Joined leader at " + leaderAddress + ", got list of members: [" + String.join(", ", members)
+                    + "]");
 
             startMembersGossip();
 
@@ -190,7 +192,8 @@ public class Raft implements RaftRemote {
                             synchronized (members) {
                                 newMembers.removeAll(members);
                                 if (newMembers.size() > 0)
-                                    logger.info("Gossip response: just learned about members [" + String.join(", ", newMembers) + "]");
+                                    logger.info("Gossip response: just learned about members ["
+                                            + String.join(", ", newMembers) + "]");
 
                                 members.addAll(newMembers);
                             }
@@ -478,7 +481,7 @@ public class Raft implements RaftRemote {
              * - True, if the candidate got a vote
              * - False, if the candidate did not get a vote
              * - null, if the system is already in a term that is greater than
-             *   that of the candidate. So the candidate has to step down.
+             * that of the candidate. So the candidate has to step down.
              */
             List<CompletableFuture<Boolean>> futures = members
                     .stream()
@@ -495,7 +498,7 @@ public class Raft implements RaftRemote {
                                     logger.info("Got vote from " + peerAddress);
                                 }
                                 Boolean ret = response.get();
-                                if(response.term() > currentTerm.get())
+                                if (response.term() > currentTerm.get())
                                     ret = null;
                                 future.complete(ret);
                             } catch (ConnectIOException e) {
@@ -518,7 +521,7 @@ public class Raft implements RaftRemote {
                 long sleep = FOLLOWER_TIMEOUT_MILLIS - timer.toc();
                 try {
                     Boolean b = (Boolean) anyFuture.get(sleep, TimeUnit.MILLISECONDS);
-                    if(b == null){
+                    if (b == null) {
                         return FOLLOWER_TIMEOUT_MILLIS - timer.toc();
                     }
                     numberVotes += (b ? 1 : 0);
