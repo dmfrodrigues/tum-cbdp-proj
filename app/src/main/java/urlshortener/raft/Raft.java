@@ -25,7 +25,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import urlshortener.Utils;
@@ -33,6 +32,7 @@ import urlshortener.db.PersistentLog;
 import urlshortener.db.PersistentMap;
 import urlshortener.db.PersistentMap.Stored;
 import urlshortener.rmi.MyRMISocketFactory;
+import urlshortener.utils.Timer;
 
 public class Raft implements RaftRemote {
     public static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
@@ -83,8 +83,7 @@ public class Raft implements RaftRemote {
     Map<String, Integer> matchIndex = null;
 
     // Volatile state on followers
-    AtomicLong heartbeatTimestampNanos = new AtomicLong(System.currentTimeMillis());
-
+    Timer heartbeatTimer = new Timer(TimeUnit.MILLISECONDS);
     //
     ExecutorService executor = Executors.newFixedThreadPool(4);
 
@@ -150,7 +149,7 @@ public class Raft implements RaftRemote {
 
             startMembersGossip();
 
-            heartbeatTimestampNanos.set(System.nanoTime());
+            heartbeatTimer.tic();
         }
     }
 
@@ -304,7 +303,7 @@ public class Raft implements RaftRemote {
         }
 
         // System.out.println("Updated heartbeat timestamp");
-        heartbeatTimestampNanos.set(System.nanoTime());
+        heartbeatTimer.tic();
 
         return new RaftResponse<Boolean>(currentTerm.get(), true);
     }
@@ -323,7 +322,7 @@ public class Raft implements RaftRemote {
                 candidateLogIsAtLeastAsUpToDateAsReceiverLog) {
             votedFor.set(candidateAddress);
             System.out.println("Candidate " + candidateAddress + " asked me to vote for term " + term + ", I said YES");
-            heartbeatTimestampNanos.set(System.nanoTime());
+            heartbeatTimer.tic();
             return new RaftResponse<Boolean>(currentTerm.get(), true);
         }
 
@@ -358,12 +357,14 @@ public class Raft implements RaftRemote {
                         break;
                 }
             }
-            Thread.sleep(sleep);
+            TimeUnit.MILLISECONDS.sleep(sleep);
         }
     }
 
     private long loopLeader() throws InterruptedException, NotBoundException, IOException {
-        long tBeginNanos = System.nanoTime();
+        Timer timer = new Timer(TimeUnit.MILLISECONDS);
+        timer.tic();
+
         synchronized (members) {
 
             // System.out.println("Sending heartbeat");
@@ -407,10 +408,8 @@ public class Raft implements RaftRemote {
                 loopLeader();
             }
         }
-        long tEndNanos = System.nanoTime();
-        long elapsedMillis = (tEndNanos - tBeginNanos) / 1000000;
-        long sleep = LEADER_HEARTBEAT_MILLIS - elapsedMillis;
-        return sleep;
+
+        return LEADER_HEARTBEAT_MILLIS - timer.toc();
     }
 
     private void heartbeatPeer(RaftRemote peer, String peerAddress) throws IOException {
@@ -436,11 +435,8 @@ public class Raft implements RaftRemote {
     }
 
     private long loopFollower() throws InterruptedException {
-        long nowMillis = System.nanoTime() / 1000000;
-        long heartbeatTimestampMillis = heartbeatTimestampNanos.get() / 1000000;
-        long elapsedMillis = nowMillis - heartbeatTimestampMillis;
-        // System.out.println("Elapsed: " + elapsedMillis);
-        if (elapsedMillis > FOLLOWER_TIMEOUT_MILLIS) {
+        // System.out.println("Elapsed: " + heartbeatTimer.toc());
+        if (heartbeatTimer.toc() > FOLLOWER_TIMEOUT_MILLIS) {
             System.out.println("Suspect leader is dead, I am now a candidate");
             synchronized (members) {
                 members.remove(leaderAddress);
@@ -449,15 +445,13 @@ public class Raft implements RaftRemote {
             return 0;
         }
 
-        long sleepUntilMillis = heartbeatTimestampMillis + FOLLOWER_TIMEOUT_MILLIS;
-        nowMillis = System.nanoTime() / 1000000;
-        long delta = Math.max(sleepUntilMillis - nowMillis, FOLLOWER_SLEEP_MILLIS);
+        long delta = Math.max(FOLLOWER_TIMEOUT_MILLIS - heartbeatTimer.toc(), FOLLOWER_SLEEP_MILLIS);
         return delta;
     }
 
     // Start election
     private long loopCandidate() throws NotBoundException, ServerNotActiveException, IOException {
-        long tBeginNanos = System.nanoTime();
+        Timer timer = new Timer(TimeUnit.MILLISECONDS);
 
         currentTerm.set(currentTerm.get() + 1);
         votedFor.set(myAddress);
@@ -516,17 +510,12 @@ public class Raft implements RaftRemote {
             while (futures.size() > 0 && numberVotes < members.size() / 2 + 1) {
                 CompletableFuture<Object> anyFuture = CompletableFuture.anyOf(
                         futures.toArray(new CompletableFuture[futures.size()]));
-                
-                long tEndNanos = System.nanoTime();
-                long elapsedMillis = (tEndNanos - tBeginNanos) / 1000000;
-                long sleep = FOLLOWER_TIMEOUT_MILLIS - elapsedMillis;
+
+                long sleep = FOLLOWER_TIMEOUT_MILLIS - timer.toc();
                 try {
                     Boolean b = (Boolean) anyFuture.get(sleep, TimeUnit.MILLISECONDS);
                     if(b == null){
-                        tEndNanos = System.nanoTime();
-                        elapsedMillis = (tEndNanos - tBeginNanos) / 1000000;
-                        sleep = FOLLOWER_TIMEOUT_MILLIS - elapsedMillis;
-                        return sleep;
+                        return FOLLOWER_TIMEOUT_MILLIS - timer.toc();
                     }
                     numberVotes += (b ? 1 : 0);
                 } catch (InterruptedException | ExecutionException e) {
@@ -547,10 +536,7 @@ public class Raft implements RaftRemote {
         }
 
         // Did not get enough votes
-        long tEndNanos = System.nanoTime();
-        long elapsedMillis = (tEndNanos - tBeginNanos) / 1000000;
-        long sleep = FOLLOWER_TIMEOUT_MILLIS - elapsedMillis;
-        return sleep;
+        return FOLLOWER_TIMEOUT_MILLIS - timer.toc();
     }
 
     private void becomeLeader() {
