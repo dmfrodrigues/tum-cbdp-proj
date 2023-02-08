@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import urlshortener.Utils;
 import urlshortener.db.PersistentLog;
 import urlshortener.db.PersistentMap;
@@ -35,6 +37,7 @@ import urlshortener.rmi.MyRMISocketFactory;
 import urlshortener.utils.Timer;
 
 public class Raft implements RaftRemote {
+    private Logger logger = LogManager.getLogger(Raft.class.getName());
     public static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
         Registry peerRegistry = LocateRegistry.getRegistry(peerAddress);
         RaftRemote peer = (RaftRemote) peerRegistry.lookup("raft");
@@ -92,6 +95,9 @@ public class Raft implements RaftRemote {
         this.leaderAddress = myAddress;
         this.state = State.LEADER;
 
+        System.out.println("INITING");
+        logger.info("INITING");
+
         currentTerm = map.loadStoredVariable("currentTerm", 0);
         votedFor = map.loadStoredVariable("votedFor", null);
         this.log = log;
@@ -113,7 +119,7 @@ public class Raft implements RaftRemote {
 
         FOLLOWER_TIMEOUT_MILLIS = Utils.Rand.inRange(random, FOLLOWER_TIMEOUT_MIN_MILLIS, FOLLOWER_TIMEOUT_MAX_MILLIS);
 
-        System.out.println("Created node with address " + myAddress + ", timeout " + FOLLOWER_TIMEOUT_MILLIS + "ms");
+        logger.info("Created node with address " + myAddress + ", timeout " + FOLLOWER_TIMEOUT_MILLIS + "ms");
     }
 
     @Override
@@ -130,12 +136,12 @@ public class Raft implements RaftRemote {
      * @throws ServerNotActiveException
      */
     public void join(String peerAddress) throws RemoteException, NotBoundException, ServerNotActiveException {
-        System.out.println("Joining node at " + peerAddress);
+        logger.info("Joining node at " + peerAddress);
 
         RaftRemote peer = connect(peerAddress);
         leaderAddress = peer.getLeaderAddress();
 
-        System.out.println("Joining leader at " + leaderAddress);
+        logger.info("Joining leader at " + leaderAddress);
         RaftRemote leader = connect(leaderAddress);
 
         synchronized (state) {
@@ -144,8 +150,7 @@ public class Raft implements RaftRemote {
             matchIndex = null;
 
             members = leader.joinRPC();
-            System.out.println("Joined leader at " + leaderAddress + ", got list of members: ["
-                    + String.join(", ", members) + "]");
+            logger.info("Joined leader at " + leaderAddress + ", got list of members: [" + String.join(", ", members) + "]");
 
             startMembersGossip();
 
@@ -185,8 +190,7 @@ public class Raft implements RaftRemote {
                             synchronized (members) {
                                 newMembers.removeAll(members);
                                 if (newMembers.size() > 0)
-                                    System.out.println("Gossip response: just learned about members ["
-                                            + String.join(", ", newMembers) + "]");
+                                    logger.info("Gossip response: just learned about members [" + String.join(", ", newMembers) + "]");
 
                                 members.addAll(newMembers);
                             }
@@ -208,7 +212,7 @@ public class Raft implements RaftRemote {
     public Members membersGossipRPC(Members members) throws RemoteException {
         members.removeAll(this.members);
         if (members.size() > 0)
-            System.out.println("Gossip request: just learned about members [" + String.join(", ", members) + "]");
+            logger.info("Gossip request: just learned about members [" + String.join(", ", members) + "]");
 
         Members ret;
         synchronized (this.members) {
@@ -241,7 +245,7 @@ public class Raft implements RaftRemote {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            System.out.println("Node " + newPeerAddress + " joined the network");
+            logger.info("Node " + newPeerAddress + " joined the network");
 
             return members;
         }
@@ -255,7 +259,7 @@ public class Raft implements RaftRemote {
         synchronized (members) {
             members.add(newPeerAddress);
         }
-        System.out.println("Added member " + newPeerAddress);
+        logger.info("Added member " + newPeerAddress);
     }
 
     @Override
@@ -339,7 +343,7 @@ public class Raft implements RaftRemote {
         if ((votedFor.get() == null || candidateAddress.equals(votedFor.get())) &&
                 candidateLogIsAtLeastAsUpToDateAsReceiverLog) {
             votedFor.set(candidateAddress);
-            System.out.println("Candidate " + candidateAddress + " asked me to vote for term " + term + ", I said YES");
+            logger.info("Candidate " + candidateAddress + " asked me to vote for term " + term + ", I said YES");
             heartbeatTimer.tic();
             return new RaftResponse<Boolean>(currentTerm.get(), true);
         }
@@ -455,7 +459,7 @@ public class Raft implements RaftRemote {
     private long loopFollower() throws InterruptedException {
         // System.out.println("Elapsed: " + heartbeatTimer.toc());
         if (heartbeatTimer.toc() > FOLLOWER_TIMEOUT_MILLIS) {
-            System.out.println("Suspect leader is dead, I am now a candidate");
+            logger.info("Suspect leader is dead, I am now a candidate");
             synchronized (members) {
                 members.remove(leaderAddress);
             }
@@ -474,13 +478,13 @@ public class Raft implements RaftRemote {
         currentTerm.set(currentTerm.get() + 1);
         votedFor.set(myAddress);
 
-        System.out.println("Starting election for term " + currentTerm);
+        logger.info("Starting election for term " + currentTerm);
 
         synchronized (members) {
             // This node is alone, so he is automatically the leader
             if (members.size() <= 1) {
                 state = State.LEADER;
-                System.out.println("Got elected leader for term " + currentTerm);
+                logger.info("Got elected leader for term " + currentTerm);
                 return 0;
             }
 
@@ -506,7 +510,7 @@ public class Raft implements RaftRemote {
                                         log.size() - 1,
                                         (log.size() >= 1 ? log.get(log.size() - 1).term : -1));
                                 if (response.get()) {
-                                    System.out.println("Got vote from " + peerAddress);
+                                    logger.info("Got vote from " + peerAddress);
                                 }
                                 Boolean ret = response.get();
                                 if(response.term() > currentTerm.get())
@@ -559,7 +563,7 @@ public class Raft implements RaftRemote {
 
     private void becomeLeader() {
         state = State.LEADER;
-        System.out.println("Became leader for term " + currentTerm);
+        logger.info("Became leader for term " + currentTerm.get());
         nextIndex = new HashMap<>();
         matchIndex = new HashMap<>();
         for (String peerAddr : members) {

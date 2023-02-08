@@ -23,6 +23,9 @@ dependencies {
     // Postgresql driver
     implementation group: 'org.postgresql', name: 'postgresql', version: '42.3.3'
     implementation group: 'org.mongodb', name: 'mongo-java-driver', version: '3.12.11'
+
+    implementation 'org.apache.logging.log4j:log4j-api:2.19.0'
+    implementation 'org.apache.logging.log4j:log4j-core:2.19.0'
 }
 
 application {

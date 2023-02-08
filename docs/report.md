@@ -28,7 +28,11 @@ The heartbeat period is $500\text{ms}$. Each peer picks a random election timeou
 
 ### How long does it take to elect a new leader?
 
-Communication between peers in local deployment is quite fast (around 1ms-10ms). We also only tested clusters with up to 6 nodes. Therefore, elections rarely fail, and they often take 500ms-700ms between the instant the leader dies and the instant a new leader is elected (this is because the leader may fail at any random moment between time instant $0$ and $T$, with average $T/2 = 500\text{ms}$).
+Communication between peers in local deployment is quite fast (around 1ms-10ms). We also only tested clusters with up to 6 nodes. Therefore, elections rarely fail, and they often take 500ms-700ms between the instant the leader dies and the instant a new leader is elected (this is because the leader may fail at any random moment between time instant $0$ and $T_{min}$, with average $T/2 = 500\text{ms}$). This makes it so that a cluster with higher number nodes usually takes less time to elect a new leader, because it is more likely for a node to choose a lower election timeout and leader failure detection happens more frequently.
+
+
+<> avg election time = 40ms + 37ms + 61ms + 43ms = 181ms / 4 = 45.25ms
+In practice, the average election time since a node detects a leader failure for a network with 2 followers and 1 leader failing is 45ms.
 
 ### Measure the impact of election timeouts. Investigate what happens when it gets too short / too long.
 
