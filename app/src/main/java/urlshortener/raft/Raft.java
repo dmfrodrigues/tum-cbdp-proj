@@ -37,7 +37,7 @@ import urlshortener.rmi.MyRMISocketFactory;
 import urlshortener.utils.Timer;
 
 public class Raft implements RaftRemote {
-    private Logger logger = LogManager.getLogger(Raft.class);
+    private Logger logger = LogManager.getLogger(Raft.class.getName());
     public static RaftRemote connect(String peerAddress) throws RemoteException, NotBoundException {
         Registry peerRegistry = LocateRegistry.getRegistry(peerAddress);
         RaftRemote peer = (RaftRemote) peerRegistry.lookup("raft");
@@ -94,6 +94,9 @@ public class Raft implements RaftRemote {
         this.myAddress = myAddress;
         this.leaderAddress = myAddress;
         this.state = State.LEADER;
+
+        System.out.println("INITING");
+        logger.info("INITING");
 
         currentTerm = map.loadStoredVariable("currentTerm", 0);
         votedFor = map.loadStoredVariable("votedFor", null);
