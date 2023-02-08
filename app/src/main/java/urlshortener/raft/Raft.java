@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -474,6 +475,13 @@ public class Raft implements RaftRemote {
             int numberVotes = 1;
 
             Set<String> abortedMembers = new HashSet<>();
+            /**
+             * These futures complete with:
+             * - True, if the candidate got a vote
+             * - False, if the candidate did not get a vote
+             * - null, if the system is already in a term that is greater than
+             *   that of the candidate. So the candidate has to step down.
+             */
             List<CompletableFuture<Boolean>> futures = members
                     .stream()
                     .map((String peerAddress) -> {
@@ -488,8 +496,10 @@ public class Raft implements RaftRemote {
                                 if (response.get()) {
                                     System.out.println("Got vote from " + peerAddress);
                                 }
-                                // TODO: do something with the term in the response
-                                future.complete(response.get());
+                                Boolean ret = response.get();
+                                if(response.term() > currentTerm.get())
+                                    ret = null;
+                                future.complete(ret);
                             } catch (ConnectIOException e) {
                                 System.err.println("Peer " + peerAddress + " not working");
                                 synchronized (abortedMembers) {
@@ -506,24 +516,37 @@ public class Raft implements RaftRemote {
             while (futures.size() > 0 && numberVotes < members.size() / 2 + 1) {
                 CompletableFuture<Object> anyFuture = CompletableFuture.anyOf(
                         futures.toArray(new CompletableFuture[futures.size()]));
+                
+                long tEndNanos = System.nanoTime();
+                long elapsedMillis = (tEndNanos - tBeginNanos) / 1000000;
+                long sleep = FOLLOWER_TIMEOUT_MILLIS - elapsedMillis;
                 try {
-                    Boolean b = (Boolean) anyFuture.get();
+                    Boolean b = (Boolean) anyFuture.get(sleep, TimeUnit.MILLISECONDS);
+                    if(b == null){
+                        tEndNanos = System.nanoTime();
+                        elapsedMillis = (tEndNanos - tBeginNanos) / 1000000;
+                        sleep = FOLLOWER_TIMEOUT_MILLIS - elapsedMillis;
+                        return sleep;
+                    }
                     numberVotes += (b ? 1 : 0);
                 } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                     continue;
+                } catch (TimeoutException e) {
+                    System.out.println("Election timed out");
+                    break;
                 }
             }
 
             members.removeAll(abortedMembers);
 
-            if(state != State.CANDIDATE) return 0;
-
             if (numberVotes >= members.size() / 2 + 1) {
                 becomeLeader();
+                return 0;
             }
         }
 
+        // Did not get enough votes
         long tEndNanos = System.nanoTime();
         long elapsedMillis = (tEndNanos - tBeginNanos) / 1000000;
         long sleep = FOLLOWER_TIMEOUT_MILLIS - elapsedMillis;
