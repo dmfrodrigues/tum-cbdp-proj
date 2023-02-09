@@ -45,7 +45,7 @@ A timeout between $T_{min} = 50\text{ms}$ and $T_{max} = 200\text{ms}$ has an av
 
 Peers use a high amount of CPU, and an extremely high amount of memory.
 
-[Peer usage](img/node_load.png)
+![Peer usage](img/node_load.png)
 
 ### Where do inserts create most load?
 
@@ -77,9 +77,7 @@ The same url was used for all requests. The average latency of each individual r
 | 8             | 0.007688999176025391    |
 | 9             | 0.007318258285522461    |
 | 10            | 0.007418155670166016    |
-|---------------|-------------------------|
 | Average       | 0.007957029342651366    |
-|---------------|-------------------------|
 
 ### Analyze where your system spends time during this operation
 
@@ -99,9 +97,7 @@ From looking at the timestamps of the logs of all pears, we conclude that the le
 | 8             | 0.0030066967010498047    |
 | 9             | 0.0033333301544189453    |
 | 10            | 0.0028035640716552734    |
-|---------------|--------------------------|
 | Average       | 0.003343486785888672     |
-|---------------|--------------------------|
 
 ## How does your system scale?
 
@@ -126,9 +122,7 @@ We inserted 10000 URLs, in increments of 1000 URLs. The average latency of each 
 | 8000           | 0.00938984545265756      | 0.0035987970305652152    |
 | 9000           | 0.008153121994762886     | 0.0023620440320270817    |
 | 10000          | 0.007965704987688763     | 0.0024641360306158298    |
------------------|--------------------------|--------------------------
 | Average        | 0.010106142788398557     |  0.0029093130000000003   |
------------------|--------------------------|--------------------------
 
 ### Measure the system performance with more nodes
 
