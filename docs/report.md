@@ -2,7 +2,7 @@
 
 Our system implements Raft for log duplication. In our case, a log entry is a key-value pair, where the value is the original URL and the key is the shortened key. It is implemented in Java, and makes use of the RMI API for RPC.
 
-The shortened URL is determined by calculating the hash of the original URL, and then encoding with Base64.
+The shortened URL is determined by finding the next available key, and then encoding with Base64.
 
 When a new log entry is added, the leader send an appendEntries request immediately, to get the new log entry to all peers as soon as possible. Also, at every heartbeat the leader also checks if the answer was false (in which case, the peer log needs to be healed), and the leader starts working on healing the faulty peer log.
 
