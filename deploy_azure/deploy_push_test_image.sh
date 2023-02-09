@@ -10,5 +10,5 @@ fi
 
 set -x
 
-docker build -t "$REGISTRY_NAME.azurecr.io"/test --build-arg TEST_SCRIPT="$2" --build-arg TEST_SCRIPT_ARGS="$3" "$1" && \
+docker build -t "$REGISTRY_NAME.azurecr.io"/test --build-arg TEST_SCRIPT="$2" --build-arg TEST_SCRIPT_ARG="$3" "$1" && \
 docker push "$REGISTRY_NAME.azurecr.io"/test

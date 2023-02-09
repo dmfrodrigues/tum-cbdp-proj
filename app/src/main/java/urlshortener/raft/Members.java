@@ -48,10 +48,10 @@ public class Members extends HashSet<String> {
             String address = it.next();
             try {
                 Raft.connect(address);
-            } catch (ConnectIOException | ConnectException e) {
+            } catch (ConnectIOException | ConnectException | NotBoundException e) {
                 System.err.println("Peer " + address + " not working");
                 it.remove();
-            } catch (RemoteException | NotBoundException e) {
+            } catch (RemoteException e) {
                 e.printStackTrace();
             }
         }
