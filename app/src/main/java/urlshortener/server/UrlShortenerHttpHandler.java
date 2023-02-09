@@ -32,6 +32,7 @@ public class UrlShortenerHttpHandler implements HttpHandler {
                     s.useDelimiter("\\A");
                     String value = (s.hasNext() ? s.next() : "");
                     s.close();
+                    logger.info("Received put " + value);
 
                     String key = urlShortener.shorten(value);
 
@@ -45,6 +46,7 @@ public class UrlShortenerHttpHandler implements HttpHandler {
                 case "GET": {
                     String[] uriParts = httpExchange.getRequestURI().toString().split("/");
                     String key = uriParts[uriParts.length-1];
+                    logger.info("Received get: " + key);
 
                     String url = urlShortener.enlongate(key);
 

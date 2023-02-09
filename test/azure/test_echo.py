@@ -2,7 +2,7 @@
 
 from sys import argv
 
-if len(argv) != 2:
+if len(argv) < 2:
     print("Usage: {} <test_script>".format(argv[0]))
     exit(1)
 

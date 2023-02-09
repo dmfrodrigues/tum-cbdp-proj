@@ -6,15 +6,14 @@ import requests
 class AppTester:
 
     def put(self, dest, url):
-        print("PUT: " + url)
-        requests.put(dest, data=url)
+        dest = "http://" + dest
+        print("PUT: (" + dest + ", " + url + ")")
+        return requests.put(dest, data=url).text
 
-    def get(self, dest, hash):
-        shortenedUrl = dest + "/" + hash
+    def get(self, shortenedUrl):
         print("GET: " + shortenedUrl)
         r = requests.get(shortenedUrl, allow_redirects=False)
 
         if r.status_code == 301:
-            print("Redirected to: " + r.headers['Location'])
             return True
         return False

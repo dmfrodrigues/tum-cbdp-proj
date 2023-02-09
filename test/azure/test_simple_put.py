@@ -21,14 +21,17 @@ get_times = []
 
 for i in range(10):
     start = time.time()
-    appTester.put(peer1, "http://www.google.com")
+    shortened = appTester.put(peer1, "http://www.google.com")
     end = time.time()
     put_times.append(end - start)
 
+    shortenedUrl = "http://" + peer2 + "/" + shortened
     start = time.time()
-    appTester.get(peer2, "http://www.google.com")
+    appTester.get(shortenedUrl)
     end = time.time()
     get_times.append(end - start)
 
-print("PUT times: {}".format(put_times))
-print("GET times: {}".format(get_times))
+print("PUT times: {} avg: {}".format(
+    put_times, sum(put_times) / len(put_times)))
+print("GET times: {} avg: {}".format(
+    get_times, sum(get_times) / len(get_times)))
