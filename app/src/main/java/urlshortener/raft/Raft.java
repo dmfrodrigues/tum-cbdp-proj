@@ -483,13 +483,13 @@ public class Raft implements RaftRemote {
         currentTerm.set(currentTerm.get() + 1);
         votedFor.set(myAddress);
 
-        logger.info("Starting election for term " + currentTerm);
+        logger.info("Starting election for term " + currentTerm.get());
 
         synchronized (members) {
             // This node is alone, so he is automatically the leader
             if (members.size() <= 1) {
-                state = State.LEADER;
-                logger.info("Got elected leader for term " + currentTerm);
+                becomeLeader();
+                logger.info("Got elected leader for term " + currentTerm.get());
                 return 0;
             }
 
@@ -558,6 +558,7 @@ public class Raft implements RaftRemote {
 
             if (numberVotes >= members.size() / 2 + 1) {
                 becomeLeader();
+                logger.info("Got elected leader for term " + currentTerm.get());
                 return 0;
             }
         }
