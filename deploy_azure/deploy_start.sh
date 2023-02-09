@@ -22,8 +22,7 @@ sleep 5
 echo Starting instances
 for (( i=0; i<$1; i++ ))
 do
-  az container start -g $RESOURCE_GROUP --name "peer$i"\
-    --environment-variables LEADER_HOST="$LEADER" &
+  az container start -g $RESOURCE_GROUP --name "peer$i" &
 done
 
 wait
