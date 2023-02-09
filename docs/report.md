@@ -19,8 +19,7 @@ The external interface of each node is an HTTP interface with two endpoints:
 
 All requests can be made to all nodes; `GET` requests are served locally by each node, but `PUT` requests are redirected to the leader in a transparent way.
 
-A few notable improvements we implemented are:
-- **When commitIndex is modified, an extraordinary heartbeat is sent to all peers**, so that the may commit more log entries. This does not make Raft linearizable, because Raft does not wait for a log entry to be committed in all peers to return to a `PUT` request (although it waits until a writing quorum of half the peers plus one has gotten the new log entry before replying to the `PUT`). It does however help expedite commits in non-leader peers, since the leader does not wait until the next scheduled periodic heartbeat to inform peers of commitIndex; the leader informs them immediately.
+One notable improvement we implemented is that **when commitIndex is modified, an extraordinary heartbeat is sent to all peers**, so that the may commit more log entries. This does not make Raft linearizable, because Raft does not wait for a log entry to be committed in all peers to return to a `PUT` request (although it waits until a writing quorum of half the peers plus one has gotten the new log entry before replying to the `PUT`). It does however help expedite commits in non-leader peers, since the leader does not wait until the next scheduled periodic heartbeat to inform peers of commitIndex; the leader informs them immediately.
 
 ## How does your cluster handle leader crashes?
 
@@ -31,7 +30,6 @@ The heartbeat period is $500\text{ms}$. Each peer picks a random election timeou
 Communication between peers in local deployment is quite fast (around 1ms-10ms). We also only tested clusters with up to 6 nodes. Therefore, elections rarely fail, and they often take 500ms-700ms between the instant the leader dies and the instant a new leader is elected (this is because the leader may fail at any random moment between time instant $0$ and $T_{min}$, with average $T/2 = 500\text{ms}$). This makes it so that a cluster with higher number nodes usually takes less time to elect a new leader, because it is more likely for a node to choose a lower election timeout and leader failure detection happens more frequently. This however, did not happen in our tests, which was surprising.
 
 
-<> avg election time = 40ms + 37ms + 61ms + 43ms = 181ms / 4 = 45.25ms
 In practice, the average election time since a node detects a leader failure for a network with 2 followers and 1 leader failing is 45ms.
 
 ### Measure the impact of election timeouts. Investigate what happens when it gets too short / too long.
