@@ -9,7 +9,7 @@ services:
       target: base
     volumes:
       - ./app:/app/app
-      - ./volumes/leader/mongo:/data/db
+      # - ./volumes/leader/mongo:/data/db
     ports:
       - 8001:8001
 
@@ -26,15 +26,14 @@ services:
       - ./app:/app/app
     ports:
       - 8001
-
-  db-admin:
-    image: mongo-express:latest
-    restart: always
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: password
-      ME_CONFIG_MONGODB_URL: mongodb://leader:27017/
-    ports:
-      - "4321:8081"
-    logging:
-      driver: none
+  # db-admin:
+  #   image: mongo-express:latest
+  #   restart: always
+  #   environment:
+  #     ME_CONFIG_MONGODB_ADMINUSERNAME: root
+  #     ME_CONFIG_MONGODB_ADMINPASSWORD: password
+  #     ME_CONFIG_MONGODB_URL: mongodb://leader:27017/
+  #   ports:
+  #     - "4321:8081"
+  #   logging:
+  #     driver: none

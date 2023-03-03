@@ -34,8 +34,9 @@ class AzureDeployment:
         self.run_script("deploy_push_app_image.sh", [])
 
     def upload_test_images(self, test_name, test_args=""):
+        print("Uploading test image: {} with args: {}".format(test_name, test_args))
         self.run_script("deploy_push_test_image.sh", [
-                        TEST_SCRIPTS_DIR, test_name])
+                        TEST_SCRIPTS_DIR, test_name, test_args])
 
     def deploy(self, n_peers, create_network=True):
         if create_network:

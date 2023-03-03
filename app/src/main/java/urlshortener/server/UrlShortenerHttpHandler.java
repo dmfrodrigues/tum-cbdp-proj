@@ -16,7 +16,7 @@ public class UrlShortenerHttpHandler implements HttpHandler {
     private UrlShortener urlShortener;
     private static Logger logger = LogManager.getLogger(UrlShortenerHttpHandler.class.getName());
 
-    public UrlShortenerHttpHandler(UrlShortener urlShortener){
+    public UrlShortenerHttpHandler(UrlShortener urlShortener) {
         this.urlShortener = urlShortener;
     }
 
@@ -25,14 +25,14 @@ public class UrlShortenerHttpHandler implements HttpHandler {
         OutputStream os = httpExchange.getResponseBody();
 
         try {
-            switch(httpExchange.getRequestMethod()){
+            switch (httpExchange.getRequestMethod()) {
                 case "PUT": {
                     InputStream is = httpExchange.getRequestBody();
                     Scanner s = new Scanner(is);
                     s.useDelimiter("\\A");
                     String value = (s.hasNext() ? s.next() : "");
                     s.close();
-                    logger.info("Received put " + value);
+                    // logger.info("Received put " + value);
 
                     String key = urlShortener.shorten(value);
 
@@ -45,12 +45,12 @@ public class UrlShortenerHttpHandler implements HttpHandler {
                 }
                 case "GET": {
                     String[] uriParts = httpExchange.getRequestURI().toString().split("/");
-                    String key = uriParts[uriParts.length-1];
-                    logger.info("Received get: " + key);
+                    String key = uriParts[uriParts.length - 1];
+                    // logger.info("Received get: " + key);
 
                     String url = urlShortener.enlongate(key);
 
-                    if(url == null){
+                    if (url == null) {
                         httpExchange.sendResponseHeaders(404, 0);
                         break;
                     }
@@ -71,7 +71,7 @@ public class UrlShortenerHttpHandler implements HttpHandler {
 
             os.flush();
             os.close();
-        } catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             httpExchange.sendResponseHeaders(500, 0);
             os.flush();

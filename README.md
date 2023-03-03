@@ -6,12 +6,11 @@
 - **Tools:** Java, RMI, Docker
 - **Institution:** [TUM](https://www.tum.de/en/)
 - **Course:** [CBDP](https://db.in.tum.de/teaching/ws2021/clouddataprocessing/?lang=de) (Cloud-Based Data Processing)
-- **Project grade:** -
 - **Group:** 43
 - **Group members:** 
     - [Diogo Miguel Ferreira Rodrigues](https://github.com/dmfrodrigues) (<dmfrodrigues2000@gmail.com>)
-    - [João Lucas Silva Martins]()
-    - [Tiago Duarte da Silva]()
+    - [João Lucas Silva Martins](https://github.com/joaolucasmartins)
+    - [Tiago Duarte da Silva](https://github.com/tiagodusilva)
 
 ## To test the project
 
